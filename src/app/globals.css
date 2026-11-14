@@ -1,0 +1,71 @@
+@import "tailwindcss";
+
+@theme {
+  /* ASF brand identity v1.0 */
+  --font-sans: "IBM Plex Sans Arabic", ui-sans-serif, system-ui, sans-serif;
+  --font-display: "Changa", "IBM Plex Sans Arabic", sans-serif;
+  --font-latin-display: "Cormorant Garamond", Georgia, serif;
+  --font-mono: "IBM Plex Mono", ui-monospace, monospace;
+
+  --color-canvas: #f6f1e8;        /* Mud Ivory */
+  --color-surface: #fffdf9;
+  --color-line: #e9dfcf;          /* Sand */
+  --color-line-strong: #d8c9b1;
+  --color-ink: #231c26;           /* Ink */
+  --color-ink-2: #4a4150;
+  --color-muted: #736a74;         /* Stone */
+
+  --color-brand-50: #f6f1f7;
+  --color-brand-100: #e9dfed;
+  --color-brand-200: #cdb8d6;
+  --color-brand-500: #6b4580;
+  --color-brand-600: #4a2a5a;     /* Najdi Plum */
+  --color-brand-700: #3d2249;
+  --color-brand-800: #321c3c;
+  --color-brand-900: #2a1733;     /* Night Plum */
+
+  --color-gold-100: #f3eadb;
+  --color-gold-300: #d6bc8c;      /* Dune Gold */
+  --color-gold-500: #b8925a;      /* Najdi Gold */
+  --color-gold-700: #8a6a3c;
+
+  --color-oasis: #4e6b5c;
+  --color-clay: #a8654a;
+  --color-pos: #4e6b5c;           /* Oasis */
+  --color-neg: #a8654a;           /* Clay */
+}
+
+html { background: var(--color-canvas); color: var(--color-ink); }
+h1, h2, h3, .font-display { font-family: var(--font-display); letter-spacing: 0; }
+body { font-family: var(--font-sans); font-feature-settings: "tnum" 1; -webkit-font-smoothing: antialiased; }
+
+.num { font-variant-numeric: tabular-nums; direction: ltr; unicode-bidi: isolate; display: inline-block; }
+.num-cell { font-variant-numeric: tabular-nums; white-space: nowrap; }
+
+*:focus-visible { outline: 2px solid var(--color-brand-500); outline-offset: 2px; border-radius: 6px; }
+
+/* subtle scrollbars */
+.scroll-thin::-webkit-scrollbar { height: 8px; width: 8px; }
+.scroll-thin::-webkit-scrollbar-thumb { background: var(--color-line-strong); border-radius: 8px; }
+
+/* Print: reports & statements export to PDF through the browser print dialog */
+@media print {
+  @page { size: A4; margin: 14mm; }
+  html, body { background: #fff !important; }
+  .no-print { display: none !important; }
+  .print-only { display: block !important; }
+  .print-area { box-shadow: none !important; border: none !important; padding: 0 !important; }
+  main { padding: 0 !important; margin: 0 !important; }
+  table { page-break-inside: auto; }
+  tr { page-break-inside: avoid; }
+}
+.print-only { display: none; }
+
+/* ASF Shurfa pattern — subtle texture on Night Plum surfaces */
+.shurfa { isolation: isolate; }
+.shurfa:not(.fixed):not(.absolute) { position: relative; }
+.shurfa::before {
+  content: ""; position: absolute; inset: 0; z-index: -1; pointer-events: none;
+  background-image: url("/brand/shurfa-gold.svg"); background-size: 84px 56px; opacity: 0.06;
+}
+.brand-rule { height: 3px; width: 56px; border-radius: 2px; background: var(--color-gold-500); }
