@@ -328,3 +328,34 @@ describe('reports & integrity', () => {
     await expectFail(s.q(`select update_fund_settings('{"contribution_treatment":"liability_refundable"}'::jsonb)`), /لا يمكن تغيير المعالجة/);
   });
 });
+
+describe('family events & welcome phrases', () => {
+  it('manager edits welcome phrases; members cannot', async () => {
+    await s.as(manager);
+    await s.q(`select set_welcome_phrases('["  أهلاً بالعائلة ", "", "صندوقنا بيتنا"]'::jsonb)`);
+    expect(await s.val(`select welcome_phrases from fund_settings`)).toEqual(['أهلاً بالعائلة', 'صندوقنا بيتنا']);
+    await expectFail(s.q(`select set_welcome_phrases('[]'::jsonb)`), /عبارة واحدة/);
+    await s.as(aliUser);
+    await expectFail(s.q(`select set_welcome_phrases('["x y"]'::jsonb)`), /مدير الصندوق فقط/);
+  });
+
+  it('invitation, notification, RSVP and counts', async () => {
+    await s.as(manager);
+    const future = await s.val(`select (fund_today() + 20)::text`);
+    const ev = await s.val(`select create_event($1::jsonb)`, [JSON.stringify({ kind: 'desert', title: 'كشتة العائلة', event_date: future, start_time: 'العصر', location: 'روضة خريم' })]);
+    await s.as(aliUser);
+    expect(Number(await s.val(`select count(*) from notifications where type = 'event_invite'`))).toBe(1);
+    await expectFail(s.q(`select create_event('{"kind":"eid","title":"x y","event_date":"2030-01-01"}'::jsonb)`), /مدير الصندوق فقط/);
+    await s.q(`select rsvp_event($1, 'yes', 3, 'نجي كلنا')`, [ev]);
+    await s.q(`select rsvp_event($1, 'yes', 4)`, [ev]);
+    await s.as(saraUser);
+    await s.q(`select rsvp_event($1, 'no')`, [ev]);
+    expect((await s.q(`select * from event_rsvps`)).length).toBe(1);   // sees only own RSVP
+    await s.as(manager);
+    const sum = await s.one(`select yes_count, no_count, guests_count, expected_attendance from v_event_summary where id = $1`, [ev]);
+    expect([Number(sum.yes_count), Number(sum.no_count), Number(sum.guests_count), Number(sum.expected_attendance)]).toEqual([1, 1, 4, 5]);
+    await s.q(`select cancel_event($1, 'تأجيل بسبب الطقس')`, [ev]);
+    await s.as(aliUser);
+    await expectFail(s.q(`select rsvp_event($1, 'yes')`, [ev]), /غير متاحة/);
+  });
+});

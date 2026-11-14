@@ -11,6 +11,7 @@ import { ContributionBars } from '@/components/charts';
 import { NotificationList } from '@/components/member-views';
 import { toRoute } from '@/components/account-pages';
 import { GreetingBand } from '@/components/welcome';
+import { NextEventStrip } from '@/components/events';
 
 export default function MemberDashboard() {
   const { data: d, error, loading } = useData<any>(() => rpc('member_dashboard', { p_member: null }));
@@ -27,6 +28,7 @@ export default function MemberDashboard() {
         <Button icon={<HandCoins className="size-4" />} onClick={() => go('/member/loans/new/')}>طلب قرض</Button>
       </div>
 
+      <NextEventStrip href="/member/events/" />
       <div className="grid grid-cols-2 gap-3 lg:grid-cols-4">
         <Stat emphasize label="إجمالي اشتراكاتي" value={sar(b.contributions_total)} hint={`هذا العام ${sar(b.contributions_ytd)}`} icon={<CalendarCheck className="size-4" />} />
         <Stat label="رصيد ودائعي" value={sar(b.deposit_balance)} hint={`المتاح للسحب ${sar(b.available_to_withdraw)}`} icon={<PiggyBank className="size-4" />} tone="brand" />

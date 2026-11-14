@@ -162,6 +162,30 @@ begin
   v_tx := public.record_deposit(v_m[12], 1000, '2026-10-02', 'تحويل بنكي', 'TRF-DUP-1');
   perform public.reverse_transaction(v_tx, 'إيداع مكرر سجل بالخطأ', '2026-10-03');
 
+  -- ---------------- family occasions (invitations + RSVPs)
+  perform public.create_event(jsonb_build_object('kind','gathering','title','لقاء العائلة الشهري','event_date', v_today - 40,
+    'start_time','بعد صلاة المغرب','location','مجلس العائلة — الرياض','notify', false));
+  v_id := public.create_event(jsonb_build_object('kind','desert','title','كشتة الشتاء','message','جلسة بر وشبة نار وقهوة وحطب… لا تفوتكم',
+    'event_date', v_today + 13,'start_time','العصر حتى العشاء','location','روضة خريم','location_url','https://maps.google.com/?q=روضة+خريم',
+    'host','أبناء سعود النجدي','notify', false));
+  for i in 1..9 loop
+    perform set_config('request.jwt.claim.sub', v_u[i]::text, true);
+    perform public.rsvp_event(v_id, (array['yes','yes','maybe','yes','no','yes','yes','maybe','yes'])[i], (array[3,2,0,4,0,1,2,0,5])[i],
+                              case i when 5 then 'مسافر ذاك اليوم — بالتوفيق' when 3 then 'أأكد لكم قبلها بيومين' end);
+  end loop;
+  perform set_config('request.jwt.claim.sub', v_mgr::text, true);
+  v_id := public.create_event(jsonb_build_object('kind','sea','title','طلعة بحرية — الخبر','message','يوم بحر وصيد وجلسة حلوة مع الأهل، القارب يتسع لـ 20 شخصاً',
+    'event_date', v_today + 41,'start_time','7:00 صباحاً','location','مرسى الخبر','host','فهد سعود النجدي'));
+  for i in 1..4 loop
+    perform set_config('request.jwt.claim.sub', v_u[i + 3]::text, true);
+    perform public.rsvp_event(v_id, (array['yes','maybe','yes','yes'])[i], (array[2,0,1,3])[i], null);
+  end loop;
+  perform set_config('request.jwt.claim.sub', v_mgr::text, true);
+  perform public.create_event(jsonb_build_object('kind','ramadan','title','فطور العائلة السنوي','event_date', date '2027-02-20',
+    'start_time','قبل أذان المغرب','location','بيت العائلة — الحريق','host','عبدالله سعود النجدي'));
+  perform public.create_event(jsonb_build_object('kind','eid','title','معايدة عيد الفطر','event_date', date '2027-03-10',
+    'start_time','بعد صلاة العيد','location','بيت العائلة — الحريق'));
+
   perform public.send_announcement('اجتماع الجمعية العمومية', 'يسرنا دعوتكم لاجتماع الجمعية العمومية السنوي للصندوق — سيتم إرسال التفاصيل لاحقاً.');
   perform public.run_daily_jobs();
 

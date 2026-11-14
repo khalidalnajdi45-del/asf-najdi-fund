@@ -8,7 +8,7 @@ export type Settings = {
   loan_default_fee_pct: string; loan_one_active_per_member: boolean; loan_block_if_overdue: boolean; loan_grace_days: number;
   withdrawal_notice_days: number; withdrawal_min_amount: string; allow_negative_cash: boolean; approval_requirements: any;
   investment_categories: { key: string; label: string }[]; expense_categories: string[]; fiscal_year_start_month: number;
-  notification_prefs: any; profit_allocation_policy: any; demo_mode: boolean; updated_at: string;
+  notification_prefs: any; profit_allocation_policy: any; demo_mode: boolean; updated_at: string; welcome_phrases: string[];
 };
 
 export function useSettings() {

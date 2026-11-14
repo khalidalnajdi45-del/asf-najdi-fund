@@ -6,6 +6,8 @@ import { Providers } from '@/components/providers';
 import { AppShell } from '@/components/shell';
 import { currentPath, go } from '@/lib/nav';
 import P0 from '@/app/admin/loan-applications/page';
+import EvA from '@/app/admin/events/page';
+import EvM from '@/app/member/events/page';
 import P1 from '@/app/admin/investments/view/page';
 import P2 from '@/app/member/withdrawals/new/page';
 import P3 from '@/app/member/contributions/page';
@@ -41,6 +43,8 @@ import P32 from '@/app/page';
 
 const ROUTES: Record<string, ComponentType> = {
   '/admin/loan-applications/': P0,
+  '/admin/events/': EvA,
+  '/member/events/': EvM,
   '/admin/investments/view/': P1,
   '/member/withdrawals/new/': P2,
   '/member/contributions/': P3,

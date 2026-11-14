@@ -130,7 +130,7 @@ async function rpc(fn: string, params: Record<string, any> = {}): Promise<Res> {
     const vals = keys.map(k => {
       const v = params[k];
       if (v === undefined || v === null) return null;
-      if (Array.isArray(v) && v.every(x => typeof x === 'string')) return k === 'p_lines' ? JSON.stringify(v) : `{${v.join(',')}}`;
+      if (Array.isArray(v) && v.every(x => typeof x === 'string')) return ['p_lines', 'p_phrases'].includes(k) ? JSON.stringify(v) : `{${v.join(',')}}`;
       if (typeof v === 'object') return JSON.stringify(v);
       return typeof v === 'number' ? String(v) : v;
     });

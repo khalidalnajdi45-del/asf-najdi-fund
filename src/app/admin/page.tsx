@@ -10,6 +10,7 @@ import { CashFlowChart, RateChart, ShareBars } from '@/components/charts';
 import { useAuth } from '@/lib/auth';
 import { categoryLabel, useSettings } from '@/lib/settings';
 import { GreetingBand } from '@/components/welcome';
+import { NextEventStrip } from '@/components/events';
 
 export default function ManagerDashboard() {
   const { data: d, error, loading } = useData<any>(() => rpc('manager_dashboard'));
@@ -22,6 +23,7 @@ export default function ManagerDashboard() {
   return (
     <>
       <GreetingBand subtitle="لوحة مدير الصندوق" />
+      <NextEventStrip href="/admin/events/" />
       <PageHeader title="لوحة التحكم" subtitle={`المركز المالي لـ${fund?.fund_name ?? 'الصندوق'} — بالريال السعودي`}
         actions={s && (s.ok
           ? <Tag tone="green">السجلات المحاسبية متطابقة</Tag>

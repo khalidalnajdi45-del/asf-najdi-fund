@@ -26,13 +26,21 @@ export function firstName(full?: string | null) {
 }
 
 /** Cycles through the phrases; returns the current one and a key that changes with it (for re-animation). */
-export function usePhrase(intervalMs: number, start = 0) {
-  const [i, setI] = useState(start);
+export function usePhrases() {
+  const { fund } = useAuth();
+  const list = fund?.welcome_phrases?.filter(Boolean);
+  return list && list.length ? list : FAMILY_PHRASES;
+}
+export function usePhrase(intervalMs: number, random = false) {
+  const list = usePhrases();
+  const [i, setI] = useState(() => (random ? Math.floor(Math.random() * 1000) : 0));
   useEffect(() => {
-    const t = setInterval(() => setI(x => (x + 1) % FAMILY_PHRASES.length), intervalMs);
+    if (list.length < 2) return;
+    const t = setInterval(() => setI(x => x + 1), intervalMs);
     return () => clearInterval(t);
-  }, [intervalMs]);
-  return { phrase: FAMILY_PHRASES[i], key: i };
+  }, [intervalMs, list.length]);
+  const k = i % list.length;
+  return { phrase: list[k], key: k };
 }
 
 const SEEN_KEY = 'asf-welcome-seen';
@@ -42,7 +50,7 @@ export function WelcomeSplash() {
   const { profile } = useAuth();
   const [show, setShow] = useState(false);
   const [leaving, setLeaving] = useState(false);
-  const { phrase, key } = usePhrase(2200, Math.floor(Math.random() * FAMILY_PHRASES.length));
+  const { phrase, key } = usePhrase(2200, true);
 
   useEffect(() => {
     let seen = false;

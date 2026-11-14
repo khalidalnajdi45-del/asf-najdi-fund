@@ -1,6 +1,7 @@
 'use client';
 import { useEffect, useState } from 'react';
-import { Plus, Trash2 } from 'lucide-react';
+import { ArrowDown, ArrowUp, Plus, RotateCcw, Trash2 } from 'lucide-react';
+import { FAMILY_PHRASES, firstName, greeting } from '@/components/welcome';
 import { rpc } from '@/lib/supabase';
 import { useAction } from '@/lib/action';
 import { useSettings, type Settings } from '@/lib/settings';
@@ -113,6 +114,8 @@ export default function SettingsPage() {
           <p className="mt-2 text-xs text-muted">القنوات الخارجية تضيف الرسائل لطابور الإرسال؛ تحتاج ربط مزود (انظر README).</p>
         </Card>
 
+        <PhrasesCard initial={f.welcome_phrases} onSaved={() => { s.reload(); refresh(); }} />
+
         <Card title="الاعتمادات وتوزيع الأرباح" className="lg:col-span-2">
           <Notice tone="gold">لا يفترض النظام أي توزيع أرباح. سجّل هنا السياسة المعتمدة من الجمعية العمومية عند إقرارها؛ تُحفظ مع سجل تدقيق ويمكن بناء التوزيع عليها لاحقاً.</Notice>
           <div className="mt-3 grid gap-3 sm:grid-cols-2">
@@ -127,5 +130,59 @@ export default function SettingsPage() {
         </Card>
       </div>
     </>
+  );
+}
+
+function PhrasesCard({ initial, onSaved }: { initial: string[] | undefined; onSaved: () => void }) {
+  const a = useAction();
+  const { profile } = useAuth();
+  const [list, setList] = useState<string[]>(() => (initial?.length ? [...initial] : [...FAMILY_PHRASES]));
+  const [draft, setDraft] = useState('');
+  const [preview, setPreview] = useState(0);
+  const clean = list.map(x => x.trim()).filter(Boolean);
+  const dirty = JSON.stringify(clean) !== JSON.stringify(initial ?? []);
+  useEffect(() => { const t = setInterval(() => setPreview(i => i + 1), 2500); return () => clearInterval(t); }, []);
+  const move = (i: number, d: number) => { const j = i + d; if (j < 0 || j >= list.length) return; const n = [...list]; [n[i], n[j]] = [n[j], n[i]]; setList(n); };
+  const add = () => { if (draft.trim()) { setList([...list, draft.trim()]); setDraft(''); } };
+  const save = async () => {
+    const r = await a.run(() => rpc('set_welcome_phrases', { p_phrases: clean }).then(() => true), 'تم حفظ عبارات الترحيب');
+    if (r) onSaved();
+  };
+  const shown = clean.length ? clean[preview % clean.length] : '';
+  return (
+    <Card title="عبارات الترحيب" subtitle="تظهر تحت اسم العضو في شاشة الدخول ولوحة التحكم وتتبدل تلقائياً" className="lg:col-span-2"
+      actions={<Button size="sm" onClick={save} loading={a.busy} disabled={!dirty || !clean.length}>حفظ العبارات</Button>}>
+      <ErrorBox>{a.error}</ErrorBox>
+      <div className="grid gap-5 lg:grid-cols-[1fr_320px]">
+        <div className="space-y-2">
+          {list.map((p, i) => (
+            <div key={i} className="flex items-center gap-2">
+              <span className="w-6 text-center text-xs text-muted num">{i + 1}</span>
+              <Input value={p} maxLength={120} onChange={e => setList(list.map((x, j) => (j === i ? e.target.value : x)))} />
+              <button className="text-muted hover:text-ink disabled:opacity-30" disabled={i === 0} onClick={() => move(i, -1)} aria-label="لأعلى"><ArrowUp className="size-4" /></button>
+              <button className="text-muted hover:text-ink disabled:opacity-30" disabled={i === list.length - 1} onClick={() => move(i, 1)} aria-label="لأسفل"><ArrowDown className="size-4" /></button>
+              <button className="text-muted hover:text-neg" onClick={() => setList(list.filter((_, j) => j !== i))} aria-label="حذف"><Trash2 className="size-4" /></button>
+            </div>
+          ))}
+          <div className="flex items-center gap-2 pt-1">
+            <span className="w-6" />
+            <Input value={draft} maxLength={120} placeholder="أضف عبارة جديدة…" onChange={e => setDraft(e.target.value)} onKeyDown={e => { if (e.key === 'Enter') { e.preventDefault(); add(); } }} />
+            <Button size="sm" variant="ghost" icon={<Plus className="size-4" />} onClick={add}>إضافة</Button>
+          </div>
+          <div className="flex items-center justify-between pt-2 text-xs text-muted">
+            <span className="num">{clean.length} عبارة · الحد الأعلى 40</span>
+            <button className="inline-flex items-center gap-1 hover:text-ink" onClick={() => setList([...FAMILY_PHRASES])}><RotateCcw className="size-3.5" />استرجاع العبارات الافتراضية</button>
+          </div>
+        </div>
+        <div className="shurfa relative flex min-h-48 flex-col items-center justify-center overflow-hidden rounded-xl bg-brand-900 px-4 py-6 text-center text-white">
+          <img src="/brand/mark-gold.svg" alt="" className="h-10 w-12" />
+          <div className="mt-3 font-display text-sm text-gold-300">{greeting()}</div>
+          <div className="font-display text-2xl font-semibold">{firstName(profile?.full_name) || 'خالد'}</div>
+          <div className="my-3 h-[3px] w-12 rounded bg-gold-500" />
+          <div key={preview} className="asf-phrase min-h-6 text-sm text-white/90">{shown}</div>
+          <div className="absolute bottom-2 text-[10px] text-brand-200">معاينة</div>
+        </div>
+      </div>
+    </Card>
   );
 }
