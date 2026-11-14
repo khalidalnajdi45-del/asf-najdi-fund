@@ -34,7 +34,7 @@ Deno.serve(async req => {
   }
   if (!allowed) return json({ error: 'غير مصرح — هذه العملية لمدير الصندوق فقط' }, 401);
 
-  const body = await req.json().catch(() => ({})) as { period?: string; ids?: string[]; resend?: boolean };
+  const body = await req.json().catch(() => ({})) as { period?: string; ids?: string[]; resend?: boolean; test_to?: string };
   const { data: settings } = await admin.from('fund_settings').select('fund_name, monthly_report_email').eq('id', 1).single();
   if (byCron && settings && !settings.monthly_report_email) return json({ skipped: 'الإرسال بالبريد متوقف من الإعدادات' });
 
@@ -56,6 +56,23 @@ Deno.serve(async req => {
       if (!r.ok) throw new Error(`Resend ${r.status}: ${(await r.text()).slice(0, 200)}`);
     }
   };
+
+  // ---- test message with sample figures (no member data involved)
+  if (body.test_to) {
+    const sample = {
+      period_label: 'نموذج تجريبي', fund_name: fundName, generated_at: new Date().toISOString(),
+      member: { full_name: 'رسالة تجربة', member_no: 'M-0000' },
+      contribution: { month: { status: 'paid', outstanding: 0 }, paid_in_month: 200, total_paid: 2400, arrears_months: 0, arrears_amount: 0 },
+      deposits: { opening: 5000, in: 1000, out: 0, closing: 6000 },
+      loans: { outstanding: 0, paid_in_month: 0, items: [] },
+      activity: [{ date: new Date().toISOString().slice(0, 10), type: 'contribution_payment', amount: 200 }],
+      net_position: 8400, fund: { active_members: 0 },
+    };
+    try {
+      await send(body.test_to, buildReportEmail({ id: 'test', report: sample, note: 'هذه رسالة تجربة للتأكد من وصول تقارير الصندوق إلى البريد.', member_name: 'خالد', portal_url: env('PORTAL_URL') || 'https://khalidalnajdi45-del.github.io/asf-najdi-fund/' }));
+      return json({ test: 'sent', to: body.test_to });
+    } catch (e) { return json({ test: 'failed', error: String((e as Error)?.message ?? e) }, 502); }
+  }
 
   // ---- recipients
   const { data: rows, error } = await admin.rpc('reports_to_email', {
