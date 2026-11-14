@@ -395,5 +395,20 @@ describe('monthly member reports', () => {
     await s.q(`select set_monthly_report_prefs(false, 'ملاحظة')`);
     expect(await s.val(`select monthly_report_auto from fund_settings`)).toBe(false);
   });
+
+  it('mailer queue: only unsent reports, marks success and failure', async () => {
+    await s.system();
+    const pending = await s.q(`select * from reports_to_email($1::date)`, [monthStart]);
+    expect(pending.length).toBeGreaterThan(0);
+    expect(pending.every((r: any) => r.email)).toBe(true);
+    const [a, b] = pending;
+    await s.q(`select mark_report_emailed($1, $2, null)`, [a.id, a.email]);
+    if (b) await s.q(`select mark_report_emailed($1, $2, 'smtp down')`, [b.id, b.email]);
+    const after = await s.q(`select id from reports_to_email($1::date)`, [monthStart]);
+    expect(after.length).toBe(pending.length - 1);              // sent one drops out, failed one is retried
+    expect((await s.q(`select id from reports_to_email(null, array[$1]::uuid[], true)`, [a.id])).length).toBe(1);
+    await s.as(aliUser);
+    await expectFail(s.q(`select * from reports_to_email()`), /permission denied/);
+  });
 });
 const n2 = (v: any) => Math.round(Number(v) * 100) / 100;

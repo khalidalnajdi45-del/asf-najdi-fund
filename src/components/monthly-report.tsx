@@ -6,6 +6,7 @@ import { Badge } from './ui';
 
 export type ReportRow = {
   id: string; member_id: string; period: string; report: any; note: string | null; created_at: string; read_at: string | null;
+  email_to?: string | null; emailed_at?: string | null; email_error?: string | null;
 };
 
 const MONTHS_SHORT = ['ينا', 'فبر', 'مار', 'أبر', 'ماي', 'يون', 'يول', 'أغس', 'سبت', 'أكت', 'نوف', 'ديس'];

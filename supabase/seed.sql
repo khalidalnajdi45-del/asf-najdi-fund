@@ -189,6 +189,11 @@ begin
   -- ---------------- monthly account reports for the last two months
   perform public.issue_monthly_reports((v_cur - interval '2 months')::date, null, false);
   perform public.issue_monthly_reports((v_cur - interval '1 month')::date, 'شكراً لالتزامكم بالاشتراكات — نذكّركم بكشتة الشتاء نهاية الشهر.', true);
+  -- demo: pretend the mailer already delivered most of last month's e-mails
+  update public.monthly_reports mr set email_to = public.member_email(mr.member_id), emailed_at = mr.created_at + interval '20 minutes', email_attempts = 1
+   where mr.period < v_cur and mr.member_id <> all(v_m[11:12]);
+  update public.monthly_reports mr set email_to = public.member_email(mr.member_id), email_error = 'Mailbox unavailable (550)', email_attempts = 1
+   where mr.period = (v_cur - interval '1 month')::date and mr.member_id = v_m[12];
 
   perform public.send_announcement('اجتماع الجمعية العمومية', 'يسرنا دعوتكم لاجتماع الجمعية العمومية السنوي للصندوق — سيتم إرسال التفاصيل لاحقاً.');
   perform public.run_daily_jobs();
