@@ -69,3 +69,25 @@ body { font-family: var(--font-sans); font-feature-settings: "tnum" 1; -webkit-f
   background-image: url("/brand/shurfa-gold.svg"); background-size: 84px 56px; opacity: 0.06;
 }
 .brand-rule { height: 3px; width: 56px; border-radius: 2px; background: var(--color-gold-500); }
+
+/* ---------- ASF welcome intro ---------- */
+.asf-glow { background: radial-gradient(circle, rgba(184,146,90,.22) 0%, rgba(184,146,90,0) 65%); animation: asf-glow 5.6s ease-in-out both; }
+.asf-mark { animation: asf-mark 1.1s cubic-bezier(.2,.8,.2,1) both; }
+.asf-greet { animation: asf-up .8s ease-out .7s both; }
+.asf-name { animation: asf-up .9s cubic-bezier(.2,.8,.2,1) 1s both; }
+.asf-rule { width: 64px; animation: asf-rule .9s cubic-bezier(.2,.8,.2,1) 1.5s both; }
+.asf-phrase { animation: asf-phrase .7s ease-out both; }
+.asf-splash .asf-phrase { animation-delay: 0s; }
+.asf-splash > div:nth-last-child(2) { animation: asf-fade .6s ease-out 1.9s both; }
+.asf-hint { animation: asf-fade .6s ease-out 2.6s both; }
+.asf-splash-out { animation: asf-out .7s ease-in both; }
+@keyframes asf-mark { from { opacity: 0; transform: scale(.6) translateY(16px); filter: blur(6px); } to { opacity: 1; transform: none; filter: none; } }
+@keyframes asf-up { from { opacity: 0; transform: translateY(14px); } to { opacity: 1; transform: none; } }
+@keyframes asf-rule { from { width: 0; opacity: 0; } to { width: 64px; opacity: 1; } }
+@keyframes asf-phrase { from { opacity: 0; transform: translateY(8px); } to { opacity: 1; transform: none; } }
+@keyframes asf-fade { from { opacity: 0; } to { opacity: 1; } }
+@keyframes asf-glow { 0% { opacity: 0; transform: translate(-50%,-50%) scale(.7); } 40% { opacity: 1; } 100% { opacity: .8; transform: translate(-50%,-50%) scale(1.05); } }
+@keyframes asf-out { to { opacity: 0; transform: scale(1.03); } }
+@media (prefers-reduced-motion: reduce) {
+  .asf-glow, .asf-mark, .asf-greet, .asf-name, .asf-rule, .asf-phrase, .asf-hint, .asf-splash > div { animation-duration: .01s !important; animation-delay: 0s !important; }
+}

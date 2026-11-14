@@ -5,7 +5,8 @@ import { execSync } from 'node:child_process';
 import { readFileSync, writeFileSync, mkdirSync } from 'node:fs';
 
 const PROD = process.env.MODE === 'prod';
-const env = { NEXT_PUBLIC_DEMO: PROD ? '' : '1', NEXT_PUBLIC_SPA: '1', NEXT_PUBLIC_PGLITE_BASE: process.env.PGLITE_BASE || 'https://cdn.jsdelivr.net/npm/@electric-sql/pglite@0.5.16/dist' };
+const ARTIFACT = process.env.MODE === 'artifact';
+const env = { NEXT_PUBLIC_DEMO: PROD ? '' : '1', NEXT_PUBLIC_SPA: '1', NEXT_PUBLIC_PGLITE_LITE: ARTIFACT ? '1' : '', NEXT_PUBLIC_PGLITE_BASE: process.env.PGLITE_BASE || 'https://cdn.jsdelivr.net/npm/@electric-sql/pglite@0.5.16/dist' };
 execSync('node scripts/prepare-demo.mjs', { stdio: 'inherit' });
 mkdirSync('dist', { recursive: true });
 const r = await build({
@@ -30,6 +31,11 @@ const html = `<!doctype html><html lang="ar" dir="rtl"><head><meta charset="utf-
 <link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Changa:wght@500;600;700&family=IBM+Plex+Sans+Arabic:wght@400;500;600;700&display=swap" rel="stylesheet">
 <style>${css}</style></head><body><div id="root"></div><script>${js.replace(/<\/script/gi, '<\\/script')}</script></body></html>`;
-const out = PROD ? 'dist/index.html' : 'dist/asf-demo.html';
-writeFileSync(out, html);
+const out = PROD ? 'dist/index.html' : ARTIFACT ? 'dist/artifact/index.html' : 'dist/asf-demo.html';
+if (ARTIFACT) {
+  mkdirSync('dist/artifact', { recursive: true });
+  const body = html.replace(/^<!doctype html><html[^>]*><head>/, '').replace('</head><body>', '').replace('</body></html>', '')
+    .replace('<meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">', '');
+  writeFileSync(out, body);
+} else writeFileSync(out, html);
 console.log(out, (html.length / 1024 / 1024).toFixed(2), 'MB');

@@ -10,9 +10,9 @@ import { Badge, Button, Card, DataTable, ErrorBox, Loading, PageHeader, Stat, Ta
 import { ContributionBars } from '@/components/charts';
 import { NotificationList } from '@/components/member-views';
 import { toRoute } from '@/components/account-pages';
+import { GreetingBand } from '@/components/welcome';
 
 export default function MemberDashboard() {
-  const { profile } = useAuth();
   const { data: d, error, loading } = useData<any>(() => rpc('member_dashboard', { p_member: null }));
   if (loading && !d) return <Loading />;
   if (error) return <ErrorBox>{error}</ErrorBox>;
@@ -21,11 +21,11 @@ export default function MemberDashboard() {
   const pendingCount = d.pending.deposits.length + d.pending.withdrawals.length + d.pending.loans.length;
   return (
     <>
-      <PageHeader title={`مرحباً، ${profile?.full_name.split(' ')[0] ?? ''}`} subtitle={<span className="num">رقم العضوية {d.member.member_no}</span>}
-        actions={<>
-          <Button variant="secondary" icon={<Plus className="size-4" />} onClick={() => (go('/member/deposits/new/'))}>طلب إيداع</Button>
-          <Button icon={<HandCoins className="size-4" />} onClick={() => (go('/member/loans/new/'))}>طلب قرض</Button>
-        </>} />
+      <GreetingBand subtitle={<span className="num">رقم العضوية {d.member.member_no}</span>} />
+      <div className="no-print -mt-2 mb-4 flex flex-wrap justify-end gap-2">
+        <Button variant="secondary" icon={<Plus className="size-4" />} onClick={() => go('/member/deposits/new/')}>طلب إيداع</Button>
+        <Button icon={<HandCoins className="size-4" />} onClick={() => go('/member/loans/new/')}>طلب قرض</Button>
+      </div>
 
       <div className="grid grid-cols-2 gap-3 lg:grid-cols-4">
         <Stat emphasize label="إجمالي اشتراكاتي" value={sar(b.contributions_total)} hint={`هذا العام ${sar(b.contributions_ytd)}`} icon={<CalendarCheck className="size-4" />} />

@@ -5,6 +5,11 @@
 import { SCHEMA_SQL, SEED_SQL } from './sql.generated';
 
 const DB_NAME = 'idb://asf-demo-v1';
+// Demo-only stand-in for pgcrypto's crypt()/gen_salt() (salted md5) — never used against a real database.
+const DEMO_CRYPT = `create schema if not exists extensions;
+create or replace function extensions.gen_salt(t text) returns text language sql volatile as $$ select 'demo$' || substr(md5(random()::text), 1, 12) $$;
+create or replace function extensions.crypt(pw text, salt text) returns text language sql immutable as
+  $$ select 'demo$' || split_part(salt, '$', 2) || '$' || md5(split_part(salt, '$', 2) || pw) $$;`;
 const SESSION_KEY = 'asf-demo-session';
 type Res<T = any> = { data: T; error: { message: string } | null; count?: number | null };
 
@@ -15,10 +20,17 @@ export function onDemoStatus(f: (s: string) => void) { status = f; }
 async function openDb(): Promise<any> {
   const load = (p: string) => import(/* webpackIgnore: true */ /* turbopackIgnore: true */ p);
   const base = process.env.NEXT_PUBLIC_PGLITE_BASE || '/pglite';
-  const [{ PGlite }, { pgcrypto }] = await Promise.all([load(`${base}/index.js`), load(`${base}/contrib/pgcrypto.js`)]);
+  // Artifact hosting only serves a fixed set of file types: there the data bundle ships renamed as .wasm
+  // and pgcrypto (a .tar.gz bundle) is replaced by demo-only SQL password hashing.
+  const lite = process.env.NEXT_PUBLIC_PGLITE_LITE === '1';
+  const { PGlite } = await load(`${base}/index.js`);
+  const extensions: Record<string, any> = {};
+  let fsBundle: Blob | undefined;
+  if (lite) fsBundle = await (await fetch(`${base}/pglite-data.wasm`)).blob();
+  else extensions.pgcrypto = (await load(`${base}/contrib/pgcrypto.js`)).pgcrypto;
   const ts = (v: string) => v.replace(' ', 'T').replace(/([+-]\d\d)$/, '$1:00');
-  const opts = {
-    extensions: { pgcrypto },
+  const opts: any = {
+    extensions, ...(fsBundle ? { fsBundle } : {}),
     parsers: { 1082: (v: string) => v, 1114: ts, 1184: ts, 20: (v: string) => Number(v), 1700: (v: string) => v },
   };
   let db: any;
@@ -27,7 +39,7 @@ async function openDb(): Promise<any> {
   const ready = await db.query(`select to_regclass('public.fund_settings') is not null as ok`);
   if (!ready.rows[0].ok) {
     status('تجهيز قاعدة البيانات…');
-    await db.exec(SCHEMA_SQL);
+    await db.exec(lite ? SCHEMA_SQL.split('create extension if not exists pgcrypto with schema extensions;').join(DEMO_CRYPT) : SCHEMA_SQL);
     status('تحميل البيانات التجريبية…');
     await db.exec(SEED_SQL);
   }
