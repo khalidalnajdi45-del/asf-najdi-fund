@@ -359,3 +359,41 @@ describe('family events & welcome phrases', () => {
     await expectFail(s.q(`select rsvp_event($1, 'yes')`, [ev]), /غير متاحة/);
   });
 });
+
+describe('monthly member reports', () => {
+  it('issues snapshots that reconcile with live balances, notifies, and stays private', async () => {
+    await s.as(manager);
+    const members = Number(await s.val(`select count(*) from members where status = 'active' and join_date <= (date_trunc('month', fund_today()) + interval '1 month - 1 day')::date`));
+    const n = Number(await s.val(`select issue_monthly_reports($1::date, 'شكراً لالتزامكم', true)`, [monthStart]));
+    expect(n).toBe(members);
+    // re-issuing the same month replaces rather than duplicates
+    await s.q(`select issue_monthly_reports($1::date, null, false)`, [monthStart]);
+    expect(Number(await s.val(`select count(*) from monthly_reports where period = $1::date`, [monthStart]))).toBe(members);
+    const r = await s.one(`select report from monthly_reports where member_id = $1 and period = $2::date`, [ali, monthStart]);
+    const b = await s.one(`select * from v_member_balances where member_id = $1`, [ali]);
+    expect(n2(r.report.deposits.closing)).toBe(n2(b.deposit_balance));
+    expect(n2(r.report.contribution.total_paid)).toBe(n2(b.contributions_total));
+    expect(n2(r.report.loans.outstanding)).toBe(n2(b.loan_outstanding));
+    expect(n2(r.report.net_position)).toBe(n2(b.contributions_total) + n2(b.deposit_balance) - n2(b.loan_outstanding));
+    await expectFail(s.q(`select issue_monthly_reports((fund_today() + 40)::date)`), /لم يبدأ/);
+
+    await s.as(aliUser);
+    expect((await s.q(`select * from monthly_reports`)).length).toBe(1);
+    expect(Number(await s.val(`select count(*) from notifications where type = 'monthly_report'`))).toBe(1);
+    const id = await s.val(`select id from monthly_reports`);
+    await s.q(`select mark_report_read($1)`, [id]);
+    expect(await s.val(`select read_at is not null from monthly_reports where id = $1`, [id])).toBe(true);
+    await expectFail(s.q(`select issue_monthly_reports()`), /مدير الصندوق فقط/);
+  });
+
+  it('auto-issue runs once per month and respects the setting', async () => {
+    await s.system();
+    const first = Number(await s.val(`select auto_monthly_reports()`));
+    expect(first).toBeGreaterThan(0);
+    expect(Number(await s.val(`select auto_monthly_reports()`))).toBe(0);
+    await s.as(manager);
+    await s.q(`select set_monthly_report_prefs(false, 'ملاحظة')`);
+    expect(await s.val(`select monthly_report_auto from fund_settings`)).toBe(false);
+  });
+});
+const n2 = (v: any) => Math.round(Number(v) * 100) / 100;

@@ -4,7 +4,7 @@ import { useEffect, useState, type ReactNode } from 'react';
 import clsx from 'clsx';
 import {
   ArrowUpFromLine, BarChart3, Bell, BookOpen, CalendarCheck, FileText, HandCoins, LayoutDashboard, LogOut, Menu,
-  PiggyBank, Receipt, ScrollText, Settings, ShieldCheck, TrendingUp, User, Users, Wallet, X, FileClock, PartyPopper,
+  PiggyBank, Receipt, ScrollText, Settings, ShieldCheck, TrendingUp, User, Users, Wallet, X, FileClock, PartyPopper, Mail,
 } from 'lucide-react';
 import { useAuth } from '@/lib/auth';
 import { supabase } from '@/lib/supabase';
@@ -26,6 +26,7 @@ export const managerNav: NavItem[] = [
   { href: '/admin/expenses/', label: 'المصروفات', icon: <Receipt className={ic} />, group: 'المالية' },
   { href: '/admin/ledger/', label: 'دفتر الأستاذ', icon: <BookOpen className={ic} />, group: 'المالية' },
   { href: '/admin/reports/', label: 'التقارير المالية', icon: <BarChart3 className={ic} />, group: 'المالية' },
+  { href: '/admin/monthly-reports/', label: 'التقارير الشهرية للأعضاء', icon: <Mail className={ic} />, group: 'العائلة' },
   { href: '/admin/events/', label: 'المناسبات والدعوات', icon: <PartyPopper className={ic} />, group: 'العائلة' },
   { href: '/admin/notifications/', label: 'الإشعارات', icon: <Bell className={ic} />, group: 'النظام' },
   { href: '/admin/audit/', label: 'سجل التدقيق', icon: <ShieldCheck className={ic} />, group: 'النظام' },
@@ -39,6 +40,7 @@ export const memberNav: NavItem[] = [
   { href: '/member/deposits/', label: 'ودائعي', icon: <Wallet className={ic} /> },
   { href: '/member/loans/', label: 'قروضي', icon: <HandCoins className={ic} /> },
   { href: '/member/transactions/', label: 'عملياتي', icon: <FileClock className={ic} /> },
+  { href: '/member/reports/', label: 'تقاريري الشهرية', icon: <Mail className={ic} /> },
   { href: '/member/statements/', label: 'كشوف الحساب', icon: <ScrollText className={ic} /> },
   { href: '/member/events/', label: 'المناسبات', icon: <PartyPopper className={ic} /> },
   { href: '/member/notifications/', label: 'الإشعارات', icon: <Bell className={ic} /> },

@@ -186,6 +186,10 @@ begin
   perform public.create_event(jsonb_build_object('kind','eid','title','معايدة عيد الفطر','event_date', date '2027-03-10',
     'start_time','بعد صلاة العيد','location','بيت العائلة — الحريق'));
 
+  -- ---------------- monthly account reports for the last two months
+  perform public.issue_monthly_reports((v_cur - interval '2 months')::date, null, false);
+  perform public.issue_monthly_reports((v_cur - interval '1 month')::date, 'شكراً لالتزامكم بالاشتراكات — نذكّركم بكشتة الشتاء نهاية الشهر.', true);
+
   perform public.send_announcement('اجتماع الجمعية العمومية', 'يسرنا دعوتكم لاجتماع الجمعية العمومية السنوي للصندوق — سيتم إرسال التفاصيل لاحقاً.');
   perform public.run_daily_jobs();
 
