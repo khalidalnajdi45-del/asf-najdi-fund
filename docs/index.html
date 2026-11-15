@@ -2855,12 +2855,12 @@ ${e.note}`:"","","\u0627\u0644\u062A\u0641\u0627\u0635\u064A\u0644 \u0643\u0627\
 <title>${Xa(s)}</title></head>
 <body style="margin:0;padding:0;background:${er.ivory};font-family:Tahoma,'Segoe UI',Arial,sans-serif;direction:rtl">
 <div style="display:none;max-height:0;overflow:hidden">\u0635\u0627\u0641\u064A \u0645\u0631\u0643\u0632\u0643 ${Xa(da(t.net_position))} \u2014 \u0645\u0644\u062E\u0635 \u0627\u0634\u062A\u0631\u0627\u0643\u0627\u062A\u0643 \u0648\u0648\u062F\u0627\u0626\u0639\u0643 \u0648\u0642\u0631\u0648\u0636\u0643 \u0644\u0634\u0647\u0631 ${Xa(t.period_label)}</div>
-<table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="background:${er.ivory}"><tr><td align="center" style="padding:24px 12px">
+<table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="background:${er.ivory}"><tr><td align="center" style="padding:16px 8px">
 <table role="presentation" width="100%" cellpadding="0" cellspacing="0" dir="rtl" style="max-width:600px;background:${er.paper};border:1px solid ${er.line};border-radius:16px;overflow:hidden;text-align:right">
-  ${e.banner_src?`<tr><td style="padding:0;line-height:0;font-size:0"><img src="${Xa(e.banner_src)}" width="600" alt="${Xa(o)}" style="display:block;width:100%;max-width:600px;height:auto;border:0"></td></tr>`:`<tr><td style="padding:22px 28px;background:${er.ivory};border-bottom:4px solid ${er.gold};text-align:center;font-size:22px;font-weight:700;color:${er.plum2}">${Xa(o)}</td></tr>`}
-  <tr><td style="padding:28px 28px 4px">
+  ${e.banner_src?`<tr><td style="padding:0;line-height:0;font-size:0"><img src="${Xa(e.banner_src)}" width="100%" alt="${Xa(o)}" style="display:block;width:100%;max-width:600px;height:auto;border:0"></td></tr>`:`<tr><td style="padding:22px 28px;background:${er.ivory};border-bottom:4px solid ${er.gold};text-align:center;font-size:22px;font-weight:700;color:${er.plum2}">${Xa(o)}</td></tr>`}
+  <tr><td style="padding:24px 24px 4px">
     <div style="font-size:12px;font-weight:700;letter-spacing:.5px;color:${er.gold}">\u0627\u0644\u062A\u0642\u0631\u064A\u0631 \u0627\u0644\u0634\u0647\u0631\u064A \u0644\u0644\u0639\u0636\u0648</div>
-    <div style="font-size:26px;font-weight:700;color:${er.plum2};margin-top:6px;line-height:1.4">\u062A\u0642\u0631\u064A\u0631 \u062D\u0633\u0627\u0628\u0643 \u2014 ${Xa(t.period_label)}</div>
+    <div style="font-size:22px;font-weight:700;color:${er.plum2};margin-top:6px;line-height:1.45">\u062A\u0642\u0631\u064A\u0631 \u062D\u0633\u0627\u0628\u0643 \u2014 ${Xa(t.period_label)}</div>
     <div style="font-size:14px;color:${er.muted};margin-top:4px">${Xa(t.member?.full_name??e.member_name)} \xB7 ${Sn(t.member?.member_no??"")}</div>
     <div style="height:3px;width:56px;background:${er.gold};border-radius:2px;margin-top:14px"></div>
   </td></tr>
@@ -2868,7 +2868,7 @@ ${e.note}`:"","","\u0627\u0644\u062A\u0641\u0627\u0635\u064A\u0644 \u0643\u0627\
   <tr><td style="padding:12px 28px 4px">
     <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="background:${er.ivory};border-radius:12px;border-right:4px solid ${er.gold}"><tr><td style="padding:18px 20px">
       <div style="font-size:12px;color:${er.muted}">\u0635\u0627\u0641\u064A \u0645\u0631\u0643\u0632\u0643 \u0641\u064A \u0627\u0644\u0635\u0646\u062F\u0648\u0642</div>
-      <div style="font-size:30px;font-weight:700;color:${er.plum2};margin-top:4px">${Sn(da(t.net_position))}</div>
+      <div style="font-size:26px;font-weight:700;color:${er.plum2};margin-top:4px">${Sn(da(t.net_position))}</div>
       <div style="font-size:13px;color:${er.muted};margin-top:6px">\u0627\u0634\u062A\u0631\u0627\u0643\u0627\u062A ${Sn(da(r.total_paid))} + \u0648\u062F\u0627\u0626\u0639 ${Sn(da(a.closing))}${zl(n.outstanding)>0?` \u2212 \u0642\u0631\u0648\u0636 ${Sn(da(n.outstanding))}`:""}</div>
     </td></tr></table>
   </td></tr>

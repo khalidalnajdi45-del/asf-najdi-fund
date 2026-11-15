@@ -71,14 +71,14 @@ export function buildReportEmail(x: EmailReportInput) {
 <title>${esc(subject)}</title></head>
 <body style="margin:0;padding:0;background:${C.ivory};font-family:Tahoma,'Segoe UI',Arial,sans-serif;direction:rtl">
 <div style="display:none;max-height:0;overflow:hidden">صافي مركزك ${esc(money(r.net_position))} — ملخص اشتراكاتك وودائعك وقروضك لشهر ${esc(r.period_label)}</div>
-<table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="background:${C.ivory}"><tr><td align="center" style="padding:24px 12px">
+<table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="background:${C.ivory}"><tr><td align="center" style="padding:16px 8px">
 <table role="presentation" width="100%" cellpadding="0" cellspacing="0" dir="rtl" style="max-width:600px;background:${C.paper};border:1px solid ${C.line};border-radius:16px;overflow:hidden;text-align:right">
   ${x.banner_src
-    ? `<tr><td style="padding:0;line-height:0;font-size:0"><img src="${esc(x.banner_src)}" width="600" alt="${esc(fund)}" style="display:block;width:100%;max-width:600px;height:auto;border:0"></td></tr>`
+    ? `<tr><td style="padding:0;line-height:0;font-size:0"><img src="${esc(x.banner_src)}" width="100%" alt="${esc(fund)}" style="display:block;width:100%;max-width:600px;height:auto;border:0"></td></tr>`
     : `<tr><td style="padding:22px 28px;background:${C.ivory};border-bottom:4px solid ${C.gold};text-align:center;font-size:22px;font-weight:700;color:${C.plum2}">${esc(fund)}</td></tr>`}
-  <tr><td style="padding:28px 28px 4px">
+  <tr><td style="padding:24px 24px 4px">
     <div style="font-size:12px;font-weight:700;letter-spacing:.5px;color:${C.gold}">التقرير الشهري للعضو</div>
-    <div style="font-size:26px;font-weight:700;color:${C.plum2};margin-top:6px;line-height:1.4">تقرير حسابك — ${esc(r.period_label)}</div>
+    <div style="font-size:22px;font-weight:700;color:${C.plum2};margin-top:6px;line-height:1.45">تقرير حسابك — ${esc(r.period_label)}</div>
     <div style="font-size:14px;color:${C.muted};margin-top:4px">${esc(r.member?.full_name ?? x.member_name)} · ${ltr(r.member?.member_no ?? '')}</div>
     <div style="height:3px;width:56px;background:${C.gold};border-radius:2px;margin-top:14px"></div>
   </td></tr>
@@ -86,7 +86,7 @@ export function buildReportEmail(x: EmailReportInput) {
   <tr><td style="padding:12px 28px 4px">
     <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="background:${C.ivory};border-radius:12px;border-right:4px solid ${C.gold}"><tr><td style="padding:18px 20px">
       <div style="font-size:12px;color:${C.muted}">صافي مركزك في الصندوق</div>
-      <div style="font-size:30px;font-weight:700;color:${C.plum2};margin-top:4px">${ltr(money(r.net_position))}</div>
+      <div style="font-size:26px;font-weight:700;color:${C.plum2};margin-top:4px">${ltr(money(r.net_position))}</div>
       <div style="font-size:13px;color:${C.muted};margin-top:6px">اشتراكات ${ltr(money(c.total_paid))} + ودائع ${ltr(money(dep.closing))}${n(l.outstanding) > 0 ? ` − قروض ${ltr(money(l.outstanding))}` : ''}</div>
     </td></tr></table>
   </td></tr>
