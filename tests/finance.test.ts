@@ -455,3 +455,12 @@ describe('stock portfolio & members view', () => {
     await s.q(`select set_member_investments_view('names')`);
   });
 });
+
+describe('scheduled jobs post as the system actor', () => {
+  it('sync_all_portfolios works without a signed-in user', async () => {
+    await s.system();
+    await s.q(`select apply_market_prices('[{"symbol":"2222","price":31}]'::jsonb)`);
+    expect(n(await s.val(`select sync_all_portfolios()`))).toBeGreaterThan(0);
+    expect(await s.val(`select created_by::text from financial_transactions order by created_at desc limit 1`)).toBe('00000000-0000-4000-8000-00000000a5f1');
+  });
+});

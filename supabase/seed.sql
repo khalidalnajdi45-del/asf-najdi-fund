@@ -14,7 +14,7 @@ declare
   joins date[] := array['2025-11-01','2025-11-01','2025-11-01','2025-11-01','2025-11-01','2025-11-01',
                         '2025-11-01','2025-11-01','2026-01-01','2026-02-01','2026-04-01','2026-06-01']::date[];
 begin
-  if exists (select 1 from public.app_users) then raise exception 'Seed expects an empty database'; end if;
+  if exists (select 1 from public.app_users where id <> '00000000-0000-4000-8000-00000000a5f1') then raise exception 'Seed expects an empty database'; end if;
 
   update public.fund_settings set fund_name = 'صندوق النجدي الادخاري', demo_mode = true,
          contribution_start_period = '2025-11-01', loan_block_if_overdue = false where id = 1;
