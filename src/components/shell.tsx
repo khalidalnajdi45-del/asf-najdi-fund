@@ -4,7 +4,7 @@ import { useEffect, useState, type ReactNode } from 'react';
 import clsx from 'clsx';
 import {
   ArrowUpFromLine, BarChart3, Bell, BookOpen, CalendarCheck, FileText, HandCoins, LayoutDashboard, LogOut, Menu,
-  PiggyBank, Receipt, ScrollText, Settings, ShieldCheck, TrendingUp, User, Users, Wallet, X, FileClock, PartyPopper, Mail, Send,
+  PiggyBank, Receipt, ScrollText, Settings, ShieldCheck, TrendingUp, Coins, User, Users, Wallet, X, FileClock, PartyPopper, Mail, Send,
 } from 'lucide-react';
 import { useAuth } from '@/lib/auth';
 import { supabase } from '@/lib/supabase';
@@ -23,6 +23,7 @@ export const managerNav: NavItem[] = [
   { href: '/admin/loan-applications/', label: 'طلبات القروض', icon: <FileText className={ic} />, group: 'القروض' },
   { href: '/admin/loans/', label: 'إدارة القروض', icon: <HandCoins className={ic} />, group: 'القروض' },
   { href: '/admin/investments/', label: 'الاستثمارات', icon: <TrendingUp className={ic} />, group: 'المالية' },
+  { href: '/admin/incomes/', label: 'الإيرادات', icon: <Coins className={ic} />, group: 'المالية' },
   { href: '/admin/expenses/', label: 'المصروفات', icon: <Receipt className={ic} />, group: 'المالية' },
   { href: '/admin/ledger/', label: 'دفتر الأستاذ', icon: <BookOpen className={ic} />, group: 'المالية' },
   { href: '/admin/reports/', label: 'التقارير المالية', icon: <BarChart3 className={ic} />, group: 'المالية' },

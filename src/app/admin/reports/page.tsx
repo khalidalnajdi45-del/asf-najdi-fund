@@ -7,18 +7,18 @@ import { rpc, supabase, cleanError } from '@/lib/supabase';
 import { q } from '@/lib/hooks';
 import { date, dateTime, firstOfMonth, lastOfMonth, monthLabel, num, pct, sar, today } from '@/lib/format';
 import { accountTypeLabels, frequencyLabels, statusLabels, txTypeLabels } from '@/lib/labels';
-import { exportXlsx, n2, printPdf } from '@/lib/export';
+import { exportBranded, printPdf } from '@/lib/export';
+import { ReportView, docToSheets, type Cell, type Doc, type Section } from '@/components/report-doc';
+import { buildFinancialStatements } from '@/lib/fin-statements';
 import { categoryLabel, useSettings, type Settings } from '@/lib/settings';
 import { useAuth } from '@/lib/auth';
 import { Button, Card, ErrorBox, Field, Input, Loading, PageHeader, Select } from '@/components/ui';
 import { MemberSelect } from '@/components/ops';
 
-type Cell = string | number | null;
-type Section = { title: string; header: string[]; rows: Cell[][]; money?: number[]; total?: Cell[] };
-type Doc = { title: string; subtitle: string; kpis?: [string, string][]; sections: Section[]; note?: string };
 type Params = { from: string; to: string; asOf: string; year: number; month: string };
 
 const REPORTS: { key: string; label: string; params: ('period' | 'asOf' | 'year' | 'month' | 'member')[] }[] = [
+  { key: 'fs', label: 'القوائم المالية السنوية (حزمة كاملة)', params: ['year'] },
   { key: 'monthly', label: 'التقرير المالي الشهري', params: ['month'] },
   { key: 'annual', label: 'التقرير المالي السنوي', params: ['year'] },
   { key: 'pl', label: 'قائمة الدخل (الأرباح والخسائر)', params: ['period'] },
@@ -31,12 +31,13 @@ const REPORTS: { key: string; label: string; params: ('period' | 'asOf' | 'year'
   { key: 'outstanding', label: 'القروض القائمة', params: [] },
   { key: 'overdue', label: 'الأقساط المتأخرة', params: [] },
   { key: 'investments', label: 'أداء الاستثمارات', params: [] },
+  { key: 'incomes', label: 'تقرير الإيرادات الأخرى', params: ['period'] },
   { key: 'expenses', label: 'تقرير المصروفات', params: ['period'] },
   { key: 'statement', label: 'كشوف حسابات الأعضاء', params: ['member'] },
 ];
 
 export default function ReportsPage() {
-  const [key, setKey] = useState('monthly');
+  const [key, setKey] = useState('fs');
   const [p, setP] = useState<Params>({ from: `${today().slice(0, 4)}-01-01`, to: today(), asOf: today(), year: Number(today().slice(0, 4)), month: firstOfMonth().slice(0, 7) });
   const [member, setMember] = useState('');
   const [doc, setDoc] = useState<Doc | null>(null);
@@ -50,14 +51,17 @@ export default function ReportsPage() {
     if (key === 'statement' || !s) return;
     let alive = true;
     setBusy(true); setError(null);
-    build(key, p, s).then(d => { if (alive) setDoc(d); }).catch(e => alive && setError(cleanError(e.message))).finally(() => alive && setBusy(false));
+    build(key, p, s, fund?.fund_name ?? '').then(d => { if (alive) setDoc(d); }).catch(e => alive && setError(cleanError(e.message))).finally(() => alive && setBusy(false));
     return () => { alive = false; };
   }, [key, p, s]);
 
-  const toExcel = () => doc && exportXlsx(doc.title, [
-    ...(doc.kpis?.length ? [{ name: 'ملخص', header: ['البند', 'القيمة'], rows: doc.kpis.map(k => [k[0], k[1]] as Cell[]) }] : []),
-    ...doc.sections.map(sec => ({ name: sec.title, header: sec.header, rows: [...sec.rows, ...(sec.total ? [sec.total] : [])].map(r => r.map((c, i) => sec.money?.includes(i) && c !== null && c !== '' ? n2(c) : c)) })),
-  ]);
+  const [xl, setXl] = useState(false);
+  const toExcel = async () => {
+    if (!doc) return;
+    setXl(true);
+    try { await exportBranded(doc.title, docToSheets(doc), { title: doc.title, subtitle: doc.subtitle, fundName: fund?.fund_name }); }
+    catch (e: any) { setError(cleanError(e.message)); } finally { setXl(false); }
+  };
 
   return (
     <>
@@ -83,7 +87,7 @@ export default function ReportsPage() {
             {key === 'statement'
               ? <Button disabled={!member} onClick={() => (go(`/admin/statement/?member=${member}`))}>فتح كشف الحساب</Button>
               : <div className="mr-auto flex gap-2">
-                  <Button variant="secondary" icon={<Download className="size-4" />} disabled={!doc} onClick={toExcel}>Excel</Button>
+                  <Button variant="secondary" icon={<Download className="size-4" />} disabled={!doc} loading={xl} onClick={toExcel}>Excel</Button>
                   <Button variant="secondary" icon={<Printer className="size-4" />} disabled={!doc} onClick={() => printPdf(doc?.title)}>PDF</Button>
                 </div>}
           </div>
@@ -97,49 +101,14 @@ export default function ReportsPage() {
   );
 }
 
-function ReportView({ doc, fundName }: { doc: Doc; fundName: string }) {
-  return (
-    <div className="print-area space-y-4">
-      <div className="rounded-xl border border-line bg-surface p-5">
-        <div className="text-xs text-muted">{fundName}</div>
-        <h2 className="mt-1 text-lg font-semibold">{doc.title}</h2>
-        <div className="text-sm text-muted">{doc.subtitle} · أُعد في {dateTime(new Date().toISOString())} · المبالغ بالريال السعودي</div>
-        {doc.kpis && <div className="mt-4 grid grid-cols-2 gap-x-6 gap-y-2 sm:grid-cols-3">
-          {doc.kpis.map(([k, v]) => <div key={k} className="border-b border-dashed border-line pb-1.5"><div className="text-xs text-muted">{k}</div><div className="num font-semibold">{v}</div></div>)}
-        </div>}
-        {doc.note && <p className="mt-3 text-xs text-muted">{doc.note}</p>}
-      </div>
-      {doc.sections.map(sec => (
-        <Card key={sec.title} title={sec.title} pad={false}>
-          <div className="scroll-thin overflow-x-auto">
-            <table className="w-full text-sm">
-              <thead><tr className="border-b border-line bg-canvas/60 text-xs text-muted">
-                {sec.header.map((h, i) => <th key={i} className={clsx('px-4 py-2.5 font-medium whitespace-nowrap', sec.money?.includes(i) ? 'text-left' : 'text-right')}>{h}</th>)}
-              </tr></thead>
-              <tbody>
-                {sec.rows.map((r, ri) => <tr key={ri} className="border-b border-line/70 last:border-0">
-                  {r.map((c, i) => <td key={i} className={clsx('px-4 py-2', sec.money?.includes(i) ? 'text-left num-cell' : 'text-right')}>{sec.money?.includes(i) && c !== null && c !== '' ? sar(c) : (c ?? '—')}</td>)}
-                </tr>)}
-                {sec.rows.length === 0 && <tr><td colSpan={sec.header.length} className="px-4 py-6 text-center text-muted">لا توجد بيانات</td></tr>}
-              </tbody>
-              {sec.total && <tfoot><tr className="border-t-2 border-line font-semibold">
-                {sec.total.map((c, i) => <td key={i} className={clsx('px-4 py-2.5', sec.money?.includes(i) ? 'text-left num-cell' : 'text-right')}>{sec.money?.includes(i) && c !== null && c !== '' ? sar(c) : c}</td>)}
-              </tr></tfoot>}
-            </table>
-          </div>
-        </Card>
-      ))}
-    </div>
-  );
-}
-
 // ------------------------------------------------------------------ report builders
 const sb = () => supabase();
 const sum = (xs: any[], k: string) => xs.reduce((a, r) => a + num(r[k]), 0);
 const st = (s: string) => statusLabels[s]?.[0] ?? s;
 
-async function build(key: string, p: Params, s: Settings): Promise<Doc> {
+async function build(key: string, p: Params, s: Settings, fundName: string): Promise<Doc> {
   switch (key) {
+    case 'fs': return buildFinancialStatements(p.year, s, fundName);
     case 'monthly': {
       const from = `${p.month}-01`;
       const [y, m] = p.month.split('-').map(Number);
@@ -205,6 +174,19 @@ async function build(key: string, p: Params, s: Settings): Promise<Doc> {
             num(i.total_invested) ? pct((num(i.realized_pl) + num(i.unrealized_pl)) / num(i.total_invested)) : '—']),
           total: ['الإجمالي', '', '', '', '', sum(r, 'total_invested'), sum(r, 'total_returned'), sum(r, 'cost_basis'), sum(r, 'current_value'), sum(r, 'unrealized_pl'), sum(r, 'realized_pl'), ''] }] };
     }
+    case 'incomes': {
+      const [inc, tx] = await Promise.all([
+        q(sb().from('incomes').select('*').gte('income_date', p.from).lte('income_date', p.to).order('income_date')),
+        q(sb().from('v_transactions').select('id, is_reversed').eq('tx_type', 'other_income')),
+      ]);
+      const rev = new Set((tx as any[]).filter(t => t.is_reversed).map(t => t.id));
+      const live = (inc as any[]).filter(e => !rev.has(e.financial_transaction_id));
+      const cats = Object.entries(live.reduce((m: Record<string, number>, e) => ({ ...m, [e.category]: (m[e.category] ?? 0) + num(e.amount) }), {}));
+      return { title: 'تقرير الإيرادات الأخرى', subtitle: `${date(p.from)} — ${date(p.to)}`, sections: [
+        { title: 'حسب الفئة', header: ['الفئة', 'المبلغ'], money: [1], rows: cats as Cell[][], total: ['الإجمالي', sum(live, 'amount')] },
+        { title: 'التفاصيل', header: ['التاريخ', 'الفئة', 'البيان', 'الدافع / المصدر', 'المرجع', 'المبلغ'], money: [5], rows: live.map(e => [e.income_date, e.category, e.description, e.payer, e.reference, e.amount]) },
+      ] };
+    }
     case 'expenses': {
       const [ex, tx] = await Promise.all([
         q(sb().from('expenses').select('*').gte('expense_date', p.from).lte('expense_date', p.to).order('expense_date')),
@@ -248,6 +230,7 @@ function plSections(r: any): Section[] {
     title: 'قائمة الدخل', header: ['الحساب', 'البند', 'المبلغ'], money: [2],
     rows: [['', 'الإيرادات', null], ...inc.map((a: any) => [a.code, a.name, a.amount]), ['', 'إجمالي الإيرادات', r.total_income],
            ['', 'المصروفات والخسائر', null], ...exp.map((a: any) => [a.code, a.name, a.amount]), ['', 'إجمالي المصروفات', r.total_expense]],
+    styles: ['section', ...inc.map(() => undefined), 'subtotal', 'section', ...exp.map(() => undefined), 'subtotal'],
     total: ['', 'صافي الفائض (العجز)', r.net_surplus],
   }, { title: 'بنود خارج قائمة الدخل', header: ['البند', 'المبلغ'], money: [1], rows: [['تغير الأرباح/الخسائر غير المحققة (حقوق الملكية)', r.unrealized_change]] }];
 }
@@ -259,6 +242,7 @@ function bsSections(r: any): Section[] {
     { title: 'الالتزامات وحقوق الملكية', header: ['الحساب', 'البند', 'الرصيد'], money: [2],
       rows: [['', accountTypeLabels.liability, null], ...by('liability').map((a: any) => [a.code, a.name, a.balance]), ['', 'إجمالي الالتزامات', r.total_liabilities],
              ['', accountTypeLabels.equity, null], ...by('equity').map((a: any) => [a.code, a.name, a.balance]), ['', 'الفائض المتراكم (غير مقفل)', r.current_surplus], ['', 'إجمالي حقوق الملكية', r.total_equity]],
+      styles: ['section', ...by('liability').map(() => undefined), 'subtotal', 'section', ...by('equity').map(() => undefined), undefined, 'subtotal'],
       total: ['', 'إجمالي الالتزامات وحقوق الملكية', num(r.total_liabilities) + num(r.total_equity)] },
   ];
 }
@@ -266,6 +250,7 @@ function bsSections(r: any): Section[] {
 function cfSection(r: any): Section {
   return {
     title: 'التدفقات النقدية', header: ['البند', 'داخل', 'خارج', 'الصافي'], money: [1, 2, 3],
+    styles: ['subtotal'],
     rows: [['رصيد النقد أول المدة', null, null, r.opening_cash], ...r.lines.map((l: any) => [txTypeLabels[l.category] ?? l.category, l.inflow, l.outflow, l.net])],
     total: ['رصيد النقد آخر المدة', null, null, r.closing_cash],
   };

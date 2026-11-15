@@ -5,6 +5,7 @@ import { rpc } from '@/lib/supabase';
 import { useData } from '@/lib/hooks';
 import { date, dateTime, monthLabel, sar, today } from '@/lib/format';
 import { statusLabels, txTypeLabels } from '@/lib/labels';
+import { PrintBrand } from './report-doc';
 import { exportXlsx, n2, printPdf } from '@/lib/export';
 import { Badge, Button, Card, DataTable, ErrorBox, Field, Input, KV, Loading, Tag } from './ui';
 
@@ -39,6 +40,7 @@ export function Statement({ memberId }: { memberId: string }) {
       {d.loading && !s && <Loading />}
       {s && (
         <div className="space-y-4">
+          <PrintBrand title={`كشف حساب عضو — ${s.member.full_name}`} subtitle={`${from} — ${to}`} />
           <Card>
             <div className="flex flex-wrap items-start justify-between gap-3">
               <div>

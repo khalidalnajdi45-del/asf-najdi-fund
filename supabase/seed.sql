@@ -164,6 +164,11 @@ begin
                                   (date '2026-01-28' + (i || ' months')::interval)::date, 'FEE-' || i);
   end loop;
 
+  -- ---------------- other income
+  perform public.record_income('تبرعات وهبات', 'هبة من أحد أفراد العائلة لدعم الصندوق', 'فرد من العائلة', 1500, '2026-03-10', 'GIFT-1');
+  perform public.record_income('أرباح بنكية', 'أرباح الحساب الادخاري — النصف الأول', 'البنك', 210.40, '2026-07-01', 'BNK-H1');
+  perform public.record_income('رسوم وغرامات', 'رسوم تأخير سداد قسط', 'عضو', 50, '2026-09-15', 'LATE-1');
+
   -- ---------------- a correction example (reversing entry instead of editing)
   v_tx := public.record_deposit(v_m[12], 1000, '2026-10-02', 'تحويل بنكي', 'TRF-DUP-1');
   perform public.reverse_transaction(v_tx, 'إيداع مكرر سجل بالخطأ', '2026-10-03');

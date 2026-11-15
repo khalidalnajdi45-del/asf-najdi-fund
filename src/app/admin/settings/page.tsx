@@ -32,7 +32,8 @@ export default function SettingsPage() {
       expense_categories: f.expense_categories.filter(Boolean), fiscal_year_start_month: Number(f.fiscal_year_start_month),
       notification_prefs: f.notification_prefs, profit_allocation_policy: f.profit_allocation_policy, demo_mode: f.demo_mode,
     };
-    const r = await a.run(() => rpc('update_fund_settings', { p: payload }).then(() => true), 'تم حفظ الإعدادات وتسجيل التغيير في سجل التدقيق');
+    const inc = (f.income_categories ?? []).map(c => c.trim()).filter(Boolean);
+    const r = await a.run(() => rpc('update_fund_settings', { p: payload }).then(() => (inc.length ? rpc('set_income_categories', { p: inc }) : null)).then(() => true), 'تم حفظ الإعدادات وتسجيل التغيير في سجل التدقيق');
     if (r) { s.reload(); refresh(); }
   };
 
@@ -96,6 +97,7 @@ export default function SettingsPage() {
           </div>
           <div className="mt-4">
             <Field label="فئات المصروفات (سطر لكل فئة)"><Textarea rows={4} value={f.expense_categories.join('\n')} onChange={e => set({ expense_categories: e.target.value.split('\n') })} /></Field>
+            <Field label="فئات الإيرادات (سطر لكل فئة)" className="mt-3"><Textarea rows={4} value={(f.income_categories ?? []).join('\n')} onChange={e => set({ income_categories: e.target.value.split('\n') })} /></Field>
           </div>
         </Card>
 

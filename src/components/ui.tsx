@@ -34,7 +34,7 @@ export function Button({ variant = 'primary', size = 'md', loading, icon, classN
 // ---------------------------------------------------------------- layout primitives
 export function PageHeader({ title, subtitle, actions, back }: { title: ReactNode; subtitle?: ReactNode; actions?: ReactNode; back?: { href: string; label: string } }) {
   return (
-    <div className="mb-6 flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
+    <div className="no-print mb-6 flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
       <div>
         {back && (
           <a href={back.href} className="mb-1 inline-flex items-center gap-1 text-[13px] text-muted hover:text-brand-600">

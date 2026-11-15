@@ -230,6 +230,23 @@ describe('expenses, reversals, immutability', () => {
     expect(n(await s.sysVal(`select account_balance('operating_expenses')`))).toBe(35);
   });
 
+  it('records other income into cash and 4900, and reverses it', async () => {
+    await s.as(manager);
+    const cash0 = n(await s.sysVal(`select account_balance('cash')`));
+    const tx = await s.val(`select record_income('أرباح بنكية', 'أرباح حساب جاري', 'البنك', 120, $1::date, 'BNK-1')`, [today]);
+    expect(n(await s.sysVal(`select account_balance('other_income')`))).toBe(120);
+    expect(n(await s.sysVal(`select account_balance('cash')`))).toBe(cash0 + 120);
+    const is = await s.val(`select report_income_statement($1::date, $1::date)`, [today]);
+    expect(n(is.total_income)).toBeGreaterThanOrEqual(120);
+    await expectFail(s.q(`select record_income('أرباح بنكية', 'x', null, 0, $1::date)`, [today]), /أكبر من صفر|وصف/);
+    await s.q(`select reverse_transaction($1, 'تسجيل مكرر')`, [tx]);
+    expect(n(await s.sysVal(`select account_balance('other_income')`))).toBe(0);
+    await s.q(`select set_income_categories('["تبرعات"]'::jsonb)`);
+    expect(await s.sysVal(`select income_categories from fund_settings`)).toEqual(['تبرعات']);
+    await s.as(aliUser);
+    await expectFail(s.q(`select record_income('تبرعات', 'تبرع', null, 10, $1::date)`, [today]));
+  });
+
   it('reverses a contribution payment instead of editing it', async () => {
     await s.as(manager);
     const tx = await s.val(`select financial_transaction_id from contribution_payments where member_id = $1 order by created_at desc limit 1`, [sara]);

@@ -48,16 +48,44 @@ body { font-family: var(--font-sans); font-feature-settings: "tnum" 1; -webkit-f
 .scroll-thin::-webkit-scrollbar { height: 8px; width: 8px; }
 .scroll-thin::-webkit-scrollbar-thumb { background: var(--color-line-strong); border-radius: 8px; }
 
+/* Report tables (screen + print) — ASF identity */
+.rtable thead th { background: var(--color-brand-600); color: #fff; font-weight: 600; font-size: 12px; }
+.rtable tbody tr:nth-child(even):not([class*="row-"]) { background: #fbf8f2; }
+.rtable .row-section td { background: var(--color-gold-100); color: var(--color-brand-700); font-weight: 600; }
+.rtable .row-subtotal td { font-weight: 600; border-top: 1px solid var(--color-gold-300); }
+.rtable .row-total td, .rtable .row-grand td { font-weight: 700; color: var(--color-brand-900); background: var(--color-canvas); border-top: 1.5px solid var(--color-gold-500); }
+.rtable .row-grand td { border-bottom: 3px double var(--color-gold-500); }
+.rtable .row-muted td { color: var(--color-muted); font-style: italic; }
+
 /* Print: reports & statements export to PDF through the browser print dialog */
 @media print {
-  @page { size: A4; margin: 14mm; }
-  html, body { background: #fff !important; }
+  @page {
+    size: A4; margin: 14mm 12mm 16mm;
+    @bottom-left { content: "صفحة " counter(page) " من " counter(pages); font: 8.5pt "IBM Plex Sans Arabic", sans-serif; color: #736a74; }
+    @bottom-right { content: "صندوق النجدي الادخاري"; font: 8.5pt "IBM Plex Sans Arabic", sans-serif; color: #8a6a3c; }
+  }
+  html, body { background: #fff !important; -webkit-print-color-adjust: exact; print-color-adjust: exact; }
   .no-print { display: none !important; }
   .print-only { display: block !important; }
   .print-area { box-shadow: none !important; border: none !important; padding: 0 !important; }
   main { padding: 0 !important; margin: 0 !important; }
   table { page-break-inside: auto; }
+  thead { display: table-header-group; }
   tr { page-break-inside: avoid; }
+  .print-break-before { break-before: page; }
+  .print-brand { margin-bottom: 14px; }
+  .report-doc { gap: 0; }
+  .report-doc > * + * { margin-top: 10px !important; }
+  .report-doc section, .report-doc header { border-color: #e9dfcf !important; border-radius: 6px !important; break-inside: auto; }
+  .report-doc .scroll-thin { overflow: visible !important; }
+  .report-doc table { font-size: 10.5px !important; }
+  .report-doc td, .report-doc th { padding-top: 5px !important; padding-bottom: 5px !important; }
+  .report-doc h3 { break-after: avoid; }
+  .report-doc .report-sec > div:first-child { break-after: avoid; }
+  .report-sign { break-inside: avoid; }
+  .fs-cover { height: 262mm; box-sizing: border-box; overflow: hidden; border-radius: 0 !important; padding: 18mm 16mm !important; display: flex; flex-direction: column; break-after: page; }
+  .fs-cover-body { margin-top: auto !important; margin-bottom: 18mm; }
+  .fs-cover > .grid { margin-top: 0 !important; }
 }
 .print-only { display: none; }
 

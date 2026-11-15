@@ -6,6 +6,7 @@ import { q, useData, useParam } from '@/lib/hooks';
 import { useAction } from '@/lib/action';
 import { date, dateTime, sar, today } from '@/lib/format';
 import { frequencyLabels, statusLabels } from '@/lib/labels';
+import { PrintBrand } from './report-doc';
 import { exportXlsx, n2, printPdf } from '@/lib/export';
 import { useSettings } from '@/lib/settings';
 import { Badge, Button, Card, DataTable, ErrorBox, Field, Input, KV, Loading, Modal, MoneyInput, Notice, PageHeader, Select, Stat, Tag, Textarea, isMoney } from './ui';
@@ -64,7 +65,7 @@ export function LoanDetail({ admin }: { admin: boolean }) {
           {!admin && l.status === 'pending' && <Button variant="danger" onClick={async () => { await rpc('cancel_my_request', { p_kind: 'loan', p_id: l.id }); d.reload(); }}>إلغاء الطلب</Button>}
         </>} />
 
-      <div className="print-only mb-4 text-sm">كشف قرض {l.loan_no} — {l.member_name} — {dateTime(new Date().toISOString())}</div>
+      <PrintBrand title={`كشف قرض ${l.loan_no}`} subtitle={l.member_name} />
 
       {l.disbursement_tx_id ? (
         <div className="grid grid-cols-2 gap-3 lg:grid-cols-4">

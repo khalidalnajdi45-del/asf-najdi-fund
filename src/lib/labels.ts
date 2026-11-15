@@ -18,7 +18,7 @@ export const txTypeLabels: Record<string, string> = {
   contribution_payment: 'اشتراك شهري', deposit: 'إيداع اختياري', withdrawal_payment: 'صرف سحب وديعة',
   loan_disbursement: 'صرف قرض', loan_repayment: 'سداد قرض', investment_capital: 'ضخ رأس مال استثمار',
   investment_income: 'عائد استثمار', investment_revaluation: 'إعادة تقييم استثمار', investment_exit: 'تخارج من استثمار',
-  expense: 'مصروف', manual_journal: 'قيد يدوي', reversal: 'قيد عكسي',
+  expense: 'مصروف', other_income: 'إيراد آخر', manual_journal: 'قيد يدوي', reversal: 'قيد عكسي',
 };
 
 export const frequencyLabels: Record<string, string> = { monthly: 'شهري', quarterly: 'ربع سنوي' };
@@ -36,5 +36,5 @@ export const entityLabels: Record<string, string> = {
   app_users: 'المستخدمون', members: 'الأعضاء', fund_settings: 'الإعدادات', financial_transactions: 'العمليات المالية',
   contribution_payments: 'مدفوعات الاشتراكات', member_deposits: 'الودائع', deposit_withdrawals: 'السحوبات', loans: 'القروض',
   loan_repayments: 'سدادات القروض', investments: 'الاستثمارات', investment_transactions: 'عمليات الاستثمار',
-  expenses: 'المصروفات', documents: 'المستندات', accounts: 'الحسابات', notifications: 'الإشعارات',
+  expenses: 'المصروفات', incomes: 'الإيرادات', documents: 'المستندات', accounts: 'الحسابات', notifications: 'الإشعارات',
 };
