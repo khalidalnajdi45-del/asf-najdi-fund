@@ -57,7 +57,7 @@ export async function buildFinancialStatements(year: number, s: Settings, fundNa
     [['إجمالي حقوق الأعضاء', '', num(bs.total_equity), num(bsP.total_equity)], 'subtotal'],
   ];
   const fp: Section = {
-    title: 'قائمة المركز المالي', sheet: 'المركز المالي', breakBefore: true,
+    title: 'قائمة المركز المالي', sheet: 'المركز المالي',
     header: ['البند', 'إيضاح', cy, py], money: [2, 3],
     rows: fpRows.map(r => r[0]), styles: fpRows.map(r => r[1]),
     total: ['إجمالي الالتزامات وحقوق الأعضاء', '', num(bs.total_liabilities) + num(bs.total_equity), num(bsP.total_liabilities) + num(bsP.total_equity)],

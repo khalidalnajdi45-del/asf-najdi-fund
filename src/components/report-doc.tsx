@@ -106,7 +106,7 @@ export function ReportView({ doc, fundName }: { doc: Doc; fundName?: string }) {
 
 function CoverPage({ cover, contents }: { cover: Cover; contents?: string[] }) {
   return (
-    <div className="fs-cover shurfa relative overflow-hidden rounded-xl bg-brand-600 p-8 text-white sm:p-12">
+    <div data-cover={JSON.stringify({ ...cover, contents })} className="fs-cover shurfa relative overflow-hidden rounded-xl bg-brand-600 p-8 text-white sm:p-12">
       <img src={LOCKUP_REV} alt={FUND} className="h-10 w-auto sm:h-12" />
       <div className="fs-cover-body mt-16 sm:mt-24">
         <div className="text-xs tracking-[0.25em] text-gold-300">{cover.kicker}</div>

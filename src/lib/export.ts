@@ -1,6 +1,7 @@
 'use client';
 import { num } from './format';
 import { LOCKUP_POS, LOCKUP_RATIO } from './brand-assets';
+import { drawCover } from './pdf-cover';
 
 export type Cell = string | number | null | undefined;
 export type RowStyle = 'section' | 'subtotal' | 'total' | 'grand' | 'muted' | undefined;
@@ -269,6 +270,8 @@ export async function printPdf(title?: string, target?: HTMLElement | null) {
   }
   let failed = false;
   const pinned: [HTMLElement, string, string, string][] = [];
+  const coverEl = el.querySelector<HTMLElement>('[data-cover]');
+  const coverData = coverEl ? JSON.parse(coverEl.dataset.cover || '{}') : null;
   try {
     await document.fonts?.ready;
     root.classList.add('pdf-export');
@@ -290,11 +293,17 @@ export async function printPdf(title?: string, target?: HTMLElement | null) {
       pagebreak: { mode: ['css', 'legacy'], before: '.print-break-before', avoid: ['tr', 'p', '.report-sign', '.avoid-break', 'h3'] },
     }).from(el).toPdf();
     const pdf = await worker.get('pdf');
-    const n = pdf.internal.getNumberOfPages();
     const pw = pdf.internal.pageSize.getWidth(), ph = pdf.internal.pageSize.getHeight();
-    for (let i = 1; i <= n; i++) {
+    const body = pdf.internal.getNumberOfPages();
+    for (let i = 1; i <= body; i++) {
       pdf.setPage(i);
-      pdf.addImage(footerImage(i, n, pw - margin[1] - margin[3]), 'PNG', margin[3], ph - 11, pw - margin[1] - margin[3], 6);
+      pdf.addImage(footerImage(i, body, pw - margin[1] - margin[3]), 'PNG', margin[3], ph - 11, pw - margin[1] - margin[3], 6);
+    }
+    if (coverData) {
+      const cover = await drawCover({ ...coverData, prepared: `أُعدت في ${new Date().toLocaleDateString('ar-SA-u-nu-latn-ca-gregory', { day: 'numeric', month: 'long', year: 'numeric', timeZone: 'Asia/Riyadh' })}` });
+      pdf.insertPage(1);
+      pdf.setPage(1);
+      pdf.addImage(cover, 'JPEG', 0, 0, pw, ph);
     }
     download(pdf.output('blob'), `${(title || document.title || FUND).replace(/[\\/:*?"<>|]/g, '-')}.pdf`);
   } catch (e) {

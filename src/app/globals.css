@@ -97,9 +97,7 @@ body { font-family: var(--font-sans); font-feature-settings: "tnum" 1; -webkit-f
 .pdf-export .report-doc .scroll-thin { overflow: visible !important; }
 .pdf-export .report-doc table { font-size: 11px !important; }
 .pdf-export .report-doc td, .pdf-export .report-doc th { padding-top: 5px !important; padding-bottom: 5px !important; }
-.pdf-export .fs-cover { height: 266mm; border-radius: 0 !important; padding: 18mm 16mm !important; display: flex; flex-direction: column; box-sizing: border-box; overflow: hidden; }
-.pdf-export .fs-cover-body { margin-top: auto !important; margin-bottom: 18mm; }
-.pdf-export .fs-cover > .grid { margin-top: 0 !important; }
+.pdf-export .fs-cover { display: none !important; }
 
 /* ASF Shurfa pattern — subtle texture on Night Plum surfaces */
 .shurfa { isolation: isolate; }
