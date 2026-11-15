@@ -11,6 +11,7 @@ import EvM from '@/app/member/events/page';
 import MrA from '@/app/admin/monthly-reports/page';
 import MrM from '@/app/member/reports/page';
 import InvM from '@/app/member/investments/page';
+import MsgA from '@/app/admin/messages/page';
 import P1 from '@/app/admin/investments/view/page';
 import P2 from '@/app/member/withdrawals/new/page';
 import P3 from '@/app/member/contributions/page';
@@ -51,6 +52,7 @@ const ROUTES: Record<string, ComponentType> = {
   '/admin/monthly-reports/': MrA,
   '/member/reports/': MrM,
   '/member/investments/': InvM,
+  '/admin/messages/': MsgA,
   '/admin/investments/view/': P1,
   '/member/withdrawals/new/': P2,
   '/member/contributions/': P3,

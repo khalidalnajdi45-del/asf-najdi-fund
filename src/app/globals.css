@@ -91,3 +91,8 @@ body { font-family: var(--font-sans); font-feature-settings: "tnum" 1; -webkit-f
 @media (prefers-reduced-motion: reduce) {
   .asf-glow, .asf-mark, .asf-greet, .asf-name, .asf-rule, .asf-phrase, .asf-hint, .asf-splash > div { animation-duration: .01s !important; animation-delay: 0s !important; }
 }
+
+/* Grid/flex children default to min-width:auto, so one wide table or chart would stretch the whole page
+   on phones. Let them shrink; wide content scrolls inside its own overflow container instead. */
+.grid > * { min-width: 0; }
+main { overflow-x: clip; }

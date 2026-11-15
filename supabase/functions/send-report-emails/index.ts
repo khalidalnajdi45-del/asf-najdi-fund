@@ -4,7 +4,7 @@
 import { createClient } from 'npm:@supabase/supabase-js@2.45.4';
 import nodemailer from 'npm:nodemailer@6.9.14';
 import { Buffer } from 'node:buffer';
-import { buildReportEmail, BANNER_CID } from './report-email.ts';
+import { buildMessageEmail, buildReportEmail, BANNER_CID } from './report-email.ts';
 
 // Brand banner (full Arabic lockup). Cached in a private Storage bucket; seeded once from the repo.
 const BANNER_VERSION = 'v2';
@@ -51,7 +51,7 @@ Deno.serve(async req => {
   }
   if (!allowed) return json({ error: 'غير مصرح — هذه العملية لمدير الصندوق فقط' }, 401);
 
-  const body = await req.json().catch(() => ({})) as { period?: string; ids?: string[]; resend?: boolean; test_to?: string };
+  const body = await req.json().catch(() => ({})) as { period?: string; ids?: string[]; resend?: boolean; test_to?: string; message_id?: string; retry?: boolean };
   const { data: settings } = await admin.from('fund_settings').select('fund_name, monthly_report_email').eq('id', 1).single();
   if (byCron && settings && !settings.monthly_report_email) return json({ skipped: 'الإرسال بالبريد متوقف من الإعدادات' });
 
@@ -80,6 +80,25 @@ Deno.serve(async req => {
   };
 
   // ---- test message with sample figures (no member data involved)
+  // ---- manager's message / reminder to selected members
+  if (body.message_id) {
+    if (byCron) return json({ error: 'غير مصرح' }, 401);
+    const { data: q, error: e } = await admin.rpc('message_recipients_pending', { p_message: body.message_id, p_retry: !!body.retry });
+    if (e) return json({ error: e.message }, 500);
+    const portalUrl = env('PORTAL_URL') || 'https://khalidalnajdi45-del.github.io/asf-najdi-fund/';
+    let sent = 0, failed = 0;
+    for (const r of q ?? []) {
+      try {
+        await send(r.email, buildMessageEmail({ subject: r.subject, body: r.body, fields: r.fields ?? {}, fund_name: fundName, portal_url: portalUrl, banner_src: bannerSrc }));
+        await admin.rpc('mark_message_recipient', { p_id: r.id, p_error: null }); sent++;
+      } catch (err) {
+        failed++; await admin.rpc('mark_message_recipient', { p_id: r.id, p_error: String((err as Error)?.message ?? err).slice(0, 300) });
+      }
+      if (smtp) await new Promise(res => setTimeout(res, 400));
+    }
+    return json({ total: q?.length ?? 0, sent, failed });
+  }
+
   if (body.test_to) {
     const sample = {
       period_label: 'نموذج تجريبي', fund_name: fundName, generated_at: new Date().toISOString(),

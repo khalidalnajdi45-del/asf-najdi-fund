@@ -119,3 +119,52 @@ export function buildReportEmail(x: EmailReportInput) {
 
   return { subject, html, text };
 }
+
+// ------------------------------------------------------------------ free-form messages & reminders
+export const MERGE_FIELDS: { key: string; label: string }[] = [
+  { key: 'الاسم', label: 'الاسم الأول' }, { key: 'الاسم_الكامل', label: 'الاسم الكامل' },
+  { key: 'المتأخرات', label: 'مبلغ متأخرات الاشتراك' }, { key: 'أشهر_التأخير', label: 'عدد أشهر التأخير' },
+  { key: 'المتبقي_من_القرض', label: 'المتبقي من القروض' }, { key: 'القسط_القادم', label: 'مبلغ القسط القادم' },
+  { key: 'تاريخ_القسط', label: 'تاريخ القسط القادم' }, { key: 'الاشتراك_الشهري', label: 'قيمة الاشتراك الشهري' },
+];
+const MONEY_KEYS = new Set(['المتأخرات', 'المتبقي_من_القرض', 'القسط_القادم', 'الاشتراك_الشهري']);
+
+/** Replaces {field} placeholders with the member's values (money formatted, dates spelled out, unknown → —). */
+export function mergeText(text: string, fields: Record<string, unknown>) {
+  return text.replace(/\{([^{}\s]+)\}/g, (all, k: string) => {
+    if (!(k in fields)) return all;
+    const v = fields[k];
+    if (v === null || v === undefined || v === '') return '—';
+    if (MONEY_KEYS.has(k)) return money(v);
+    if (k === 'تاريخ_القسط') return d(v);
+    return String(v);
+  });
+}
+
+export function buildMessageEmail(x: { subject: string; body: string; fields: Record<string, unknown>; fund_name: string;
+  portal_url: string; banner_src?: string | null }) {
+  const subject = mergeText(x.subject, x.fields);
+  const body = mergeText(x.body, x.fields);
+  const paras = body.split(/\n{2,}/).map(p => `<p style="margin:0 0 14px">${esc(p).replace(/\n/g, '<br>')}</p>`).join('');
+  const link = `${x.portal_url.replace(/\/?$/, '/')}#/member/`;
+  const html = `<!doctype html><html lang="ar" dir="rtl"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<meta name="color-scheme" content="light only"><meta name="supported-color-schemes" content="light"><title>${esc(subject)}</title></head>
+<body style="margin:0;padding:0;background:${C.ivory};font-family:Tahoma,'Segoe UI',Arial,sans-serif;direction:rtl">
+<div style="display:none;max-height:0;overflow:hidden">${esc(body.slice(0, 120))}</div>
+<table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="background:${C.ivory}"><tr><td align="center" style="padding:16px 8px">
+<table role="presentation" width="100%" cellpadding="0" cellspacing="0" dir="rtl" style="max-width:600px;background:${C.paper};border:1px solid ${C.line};border-radius:16px;overflow:hidden;text-align:right">
+  ${x.banner_src
+    ? `<tr><td style="padding:0;line-height:0;font-size:0"><img src="${esc(x.banner_src)}" width="100%" alt="${esc(x.fund_name)}" style="display:block;width:100%;max-width:600px;height:auto;border:0"></td></tr>`
+    : `<tr><td style="padding:22px 24px;background:${C.ivory};border-bottom:4px solid ${C.gold};text-align:center;font-size:22px;font-weight:700;color:${C.plum2}">${esc(x.fund_name)}</td></tr>`}
+  <tr><td style="padding:24px 24px 6px">
+    <div style="font-size:21px;font-weight:700;color:${C.plum2};line-height:1.45">${esc(subject)}</div>
+    <div style="height:3px;width:56px;background:${C.gold};border-radius:2px;margin-top:12px"></div>
+  </td></tr>
+  <tr><td style="padding:16px 24px 4px;font-size:15px;color:${C.ink};line-height:1.9">${paras}</td></tr>
+  <tr><td align="center" style="padding:12px 24px 8px">
+    <a href="${esc(link)}" style="display:inline-block;background:${C.plum2};color:#fff;text-decoration:none;font-size:15px;font-weight:700;padding:12px 28px;border-radius:10px">الدخول إلى بوابة الأعضاء</a>
+  </td></tr>
+  <tr><td style="padding:14px 24px 24px;font-size:12px;color:${C.muted};line-height:1.8;text-align:center">رسالة من إدارة ${esc(x.fund_name)}</td></tr>
+</table></td></tr></table></body></html>`;
+  return { subject, html, text: `${body}\n\n${link}` };
+}

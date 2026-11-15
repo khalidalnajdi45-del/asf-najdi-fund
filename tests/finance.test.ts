@@ -482,3 +482,25 @@ describe('waived contributions', () => {
     expect(await s.val(`select status from v_contribution_status where id = $1`, [c.id])).toBe('overdue');
   });
 });
+
+describe('messages to members', () => {
+  it('creates personalised queue, notifies in-app, and keeps other members private', async () => {
+    await s.as(manager);
+    const id = await s.val(`select create_member_message('contribution_reminder', 'تذكير', 'السلام عليكم {الاسم}، المتأخرات {المتأخرات}', array[$1,$2]::uuid[])`, [ali, sara]);
+    const v: any = await s.one(`select recipients, pending from v_member_messages where id = $1`, [id]);
+    expect([n(v.recipients), n(v.pending)]).toEqual([2, 2]);
+    await s.system();
+    const q: any[] = await s.q(`select * from message_recipients_pending($1)`, [id]);
+    expect(q.length).toBe(2);
+    expect(q[0].fields['الاسم']).toBeTruthy();
+    await s.q(`select mark_message_recipient($1, null)`, [q[0].id]);
+    await s.q(`select mark_message_recipient($1, 'smtp')`, [q[1].id]);
+    expect((await s.q(`select * from message_recipients_pending($1)`, [id])).length).toBe(0);
+    expect((await s.q(`select * from message_recipients_pending($1, true)`, [id])).length).toBe(1);
+    await s.as(aliUser);
+    expect(n(await s.val(`select count(*) from notifications where type = 'message'`))).toBe(1);
+    expect((await s.q(`select * from member_messages`)).length).toBe(0);
+    await expectFail(s.q(`select member_merge_fields($1)`, [sara]), /permission denied/);
+    await expectFail(s.q(`select create_member_message('custom','x y','z w', array[$1]::uuid[])`, [sara]), /مدير الصندوق فقط/);
+  });
+});

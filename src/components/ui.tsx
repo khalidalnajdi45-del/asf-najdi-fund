@@ -72,12 +72,12 @@ export function Stat({ label, value, hint, tone = 'neutral', icon, emphasize }: 
   label: ReactNode; value: ReactNode; hint?: ReactNode; tone?: 'neutral' | 'pos' | 'neg' | 'brand'; icon?: ReactNode; emphasize?: boolean;
 }) {
   return (
-    <div className={clsx('rounded-xl border p-4', emphasize ? 'shurfa overflow-hidden border-brand-900 bg-brand-900 text-white' : 'border-line bg-surface')}>
+    <div className={clsx('rounded-xl border p-3.5 sm:p-4', emphasize ? 'shurfa overflow-hidden border-brand-900 bg-brand-900 text-white' : 'border-line bg-surface')}>
       <div className={clsx('flex items-center justify-between text-[13px]', emphasize ? 'text-brand-100' : 'text-muted')}>
         <span>{label}</span>
         {icon && <span className={clsx(emphasize ? 'text-gold-300' : 'text-gold-500')}>{icon}</span>}
       </div>
-      <div className={clsx('mt-2 text-xl font-semibold tracking-tight num', emphasize && 'text-gold-100',
+      <div className={clsx('mt-2 text-[17px] font-semibold tracking-tight num sm:text-xl', emphasize && 'text-gold-100',
         !emphasize && tone === 'pos' && 'text-pos', !emphasize && tone === 'neg' && 'text-neg', !emphasize && tone === 'brand' && 'text-brand-700')}>
         {value}
       </div>
@@ -118,7 +118,7 @@ const inputCls = 'w-full rounded-lg border border-line-strong bg-surface px-3 te
 export function Input(props: React.InputHTMLAttributes<HTMLInputElement>) {
   return <input {...props} className={clsx(inputCls, 'h-10', props.className)} />;
 }
-export function Textarea(props: React.TextareaHTMLAttributes<HTMLTextAreaElement>) {
+export function Textarea(props: React.ComponentProps<'textarea'>) {
   return <textarea rows={3} {...props} className={clsx(inputCls, 'py-2', props.className)} />;
 }
 export function Select({ options, placeholder, ...props }: React.SelectHTMLAttributes<HTMLSelectElement> & { options: { value: string; label: string }[]; placeholder?: string }) {
