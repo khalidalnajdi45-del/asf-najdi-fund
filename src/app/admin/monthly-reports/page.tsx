@@ -9,6 +9,7 @@ import { dateTime, firstOfMonth, monthLabel, num, sar } from '@/lib/format';
 import { Button, Card, DataTable, ErrorBox, Field, Input, Modal, Notice, PageHeader, Stat, Tag, Textarea, useToast } from '@/components/ui';
 import { MonthlyReportView, reportText, waLink, type ReportRow } from '@/components/monthly-report';
 import { buildReportEmail } from '@/lib/report-email';
+import { EMAIL_BANNER_DATA_URI } from '@/lib/email-banner';
 import { mailSummary, sendReportEmails } from '@/lib/report-mail';
 
 type M = { id: string; full_name: string; member_no: string; phone: string | null; email: string | null; join_date: string };
@@ -173,7 +174,7 @@ function PrefsModal({ auto, note, email, onClose }: { auto: boolean; note: strin
 
 function EmailPreview({ row, name, email, onClose }: { row: ReportRow; name: string; email: string | null; onClose: () => void }) {
   const m = useMemo(() => buildReportEmail({
-    id: row.id, report: row.report, note: row.note, member_name: name,
+    id: row.id, report: row.report, note: row.note, member_name: name, banner_src: EMAIL_BANNER_DATA_URI,
     portal_url: typeof location !== 'undefined' ? location.href.split('#')[0] : '',
   }), [row, name]);
   return (
