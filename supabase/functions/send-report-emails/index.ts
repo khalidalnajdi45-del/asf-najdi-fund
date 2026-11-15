@@ -3,7 +3,7 @@
 // Provider: Gmail SMTP (GMAIL_USER + GMAIL_APP_PASSWORD) or Resend (RESEND_API_KEY + MAIL_FROM).
 import { createClient } from 'npm:@supabase/supabase-js@2.45.4';
 import nodemailer from 'npm:nodemailer@6.9.14';
-import { buildReportEmail } from './report-email.ts';
+import { buildReportEmail, LOGO_CID, LOGO_PNG_B64 } from './report-email.ts';
 
 const cors = {
   'Access-Control-Allow-Origin': '*',
@@ -47,11 +47,13 @@ Deno.serve(async req => {
   const smtp = !resendKey ? nodemailer.createTransport({ host: 'smtp.gmail.com', port: 465, secure: true, auth: { user: gmailUser, pass: gmailPass } }) : null;
   const send = async (to: string, m: { subject: string; html: string; text: string }) => {
     if (smtp) {
-      await smtp.sendMail({ from: { name: fundName, address: gmailUser }, to, subject: m.subject, html: m.html, text: m.text });
+      await smtp.sendMail({ from: { name: fundName, address: gmailUser }, to, subject: m.subject, html: m.html, text: m.text,
+        attachments: [{ filename: 'asf-logo.png', content: LOGO_PNG_B64, encoding: 'base64', cid: LOGO_CID, contentType: 'image/png' }] });
     } else {
       const r = await fetch('https://api.resend.com/emails', {
         method: 'POST', headers: { Authorization: `Bearer ${resendKey}`, 'Content-Type': 'application/json' },
-        body: JSON.stringify({ from: env('MAIL_FROM') || `${fundName} <onboarding@resend.dev>`, to: [to], subject: m.subject, html: m.html, text: m.text }),
+        body: JSON.stringify({ from: env('MAIL_FROM') || `${fundName} <onboarding@resend.dev>`, to: [to], subject: m.subject, html: m.html, text: m.text,
+          attachments: [{ filename: 'asf-logo.png', content: LOGO_PNG_B64, content_id: LOGO_CID }] }),
       });
       if (!r.ok) throw new Error(`Resend ${r.status}: ${(await r.text()).slice(0, 200)}`);
     }
@@ -69,7 +71,7 @@ Deno.serve(async req => {
       net_position: 8400, fund: { active_members: 0 },
     };
     try {
-      await send(body.test_to, buildReportEmail({ id: 'test', report: sample, note: 'هذه رسالة تجربة للتأكد من وصول تقارير الصندوق إلى البريد.', member_name: 'خالد', portal_url: env('PORTAL_URL') || 'https://khalidalnajdi45-del.github.io/asf-najdi-fund/' }));
+      await send(body.test_to, buildReportEmail({ id: 'test', report: sample, note: 'هذه رسالة تجربة للتأكد من وصول تقارير الصندوق إلى البريد.', member_name: 'خالد', logo_src: `cid:${LOGO_CID}`, portal_url: env('PORTAL_URL') || 'https://khalidalnajdi45-del.github.io/asf-najdi-fund/' }));
       return json({ test: 'sent', to: body.test_to });
     } catch (e) { return json({ test: 'failed', error: String((e as Error)?.message ?? e) }, 502); }
   }
@@ -85,7 +87,7 @@ Deno.serve(async req => {
   for (const r of rows ?? []) {
     if (!r.email) { noEmail++; await admin.rpc('mark_report_emailed', { p_id: r.id, p_to: null, p_error: 'لا يوجد بريد إلكتروني للعضو' }); continue; }
     try {
-      await send(r.email, buildReportEmail({ id: r.id, report: r.report, note: r.note, member_name: r.member_name, portal_url: portal }));
+      await send(r.email, buildReportEmail({ id: r.id, report: r.report, note: r.note, member_name: r.member_name, logo_src: `cid:${LOGO_CID}`, portal_url: portal }));
       await admin.rpc('mark_report_emailed', { p_id: r.id, p_to: r.email, p_error: null });
       sent++;
     } catch (e) {
