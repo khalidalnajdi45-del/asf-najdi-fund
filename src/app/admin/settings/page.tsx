@@ -115,6 +115,7 @@ export default function SettingsPage() {
         </Card>
 
         <PhrasesCard initial={f.welcome_phrases} onSaved={() => { s.reload(); refresh(); }} />
+        <InvestmentsViewCard mode={f.member_investments_view} onSaved={s.reload} />
 
         <Card title="الاعتمادات وتوزيع الأرباح" className="lg:col-span-2">
           <Notice tone="gold">لا يفترض النظام أي توزيع أرباح. سجّل هنا السياسة المعتمدة من الجمعية العمومية عند إقرارها؛ تُحفظ مع سجل تدقيق ويمكن بناء التوزيع عليها لاحقاً.</Notice>
@@ -182,6 +183,29 @@ function PhrasesCard({ initial, onSaved }: { initial: string[] | undefined; onSa
           <div key={preview} className="asf-phrase min-h-6 text-sm text-white/90">{shown}</div>
           <div className="absolute bottom-2 text-[10px] text-brand-200">معاينة</div>
         </div>
+      </div>
+    </Card>
+  );
+}
+
+function InvestmentsViewCard({ mode, onSaved }: { mode: 'hidden' | 'names' | 'full'; onSaved: () => void }) {
+  const a = useAction();
+  const opts = [
+    { v: 'names', t: 'الأسماء والأسعار فقط', d: 'يرى الأعضاء أسماء الاستثمارات والأسهم وأسعارها في السوق، بدون كميات أو مبالغ' },
+    { v: 'full', t: 'كامل التفاصيل', d: 'يرى الأعضاء أيضاً الكميات والقيمة السوقية لكل استثمار' },
+    { v: 'hidden', t: 'مخفية', d: 'لا تظهر صفحة استثمارات الصندوق للأعضاء' },
+  ] as const;
+  const pick = async (v: string) => { if (v !== mode && await a.run(() => rpc('set_member_investments_view', { p_mode: v }).then(() => true), 'تم الحفظ')) onSaved(); };
+  return (
+    <Card title="عرض الاستثمارات للأعضاء" subtitle="ما يظهر للأعضاء في صفحة «استثمارات الصندوق»">
+      <ErrorBox>{a.error}</ErrorBox>
+      <div className="space-y-2">
+        {opts.map(o => (
+          <label key={o.v} className={`flex cursor-pointer gap-3 rounded-lg border p-3 text-sm transition ${mode === o.v ? 'border-brand-600 bg-brand-50' : 'border-line hover:border-line-strong'}`}>
+            <input type="radio" name="inv-view" className="mt-0.5 size-4 accent-brand-600" checked={mode === o.v} disabled={a.busy} onChange={() => pick(o.v)} />
+            <span><span className="font-medium text-ink">{o.t}</span><span className="mt-0.5 block text-xs text-muted">{o.d}</span></span>
+          </label>
+        ))}
       </div>
     </Card>
   );

@@ -8,6 +8,7 @@ import { date, num, sar, today } from '@/lib/format';
 import { categoryLabel, useSettings } from '@/lib/settings';
 import { Badge, Button, Card, DataTable, ErrorBox, Field, Input, isMoney, KV, Loading, Modal, MoneyInput, Notice, PageHeader, PL, Select, Stat, Tag, Textarea } from '@/components/ui';
 import { DocumentList, DocumentUpload, ReverseModal } from '@/components/ops';
+import { PortfolioCard } from '@/components/portfolio';
 
 const kindLabels: Record<string, string> = { capital_in: 'ضخ رأس مال', income: 'عائد محقق', revaluation: 'إعادة تقييم', exit: 'تخارج' };
 type Op = 'capital' | 'income' | 'revalue' | 'exit' | 'edit' | null;
@@ -63,6 +64,7 @@ export default function InvestmentDetail() {
           <div className="mt-3"><DocumentUpload entityType="investment" entityId={p.id} onDone={d.reload} /></div>
         </Card>
       </div>
+      {p.category === 'equity' && live && <PortfolioCard p={p} onBooked={d.reload} />}
       <Card className="mt-4" title="سجل عمليات الاستثمار" pad={false}>
         <DataTable rows={[...txs].reverse()} columns={[
           { key: 'tx_date', header: 'التاريخ', render: r => date(r.tx_date) },

@@ -32,7 +32,8 @@ export function pct(v: unknown, digits = 1) {
 export function date(v: unknown) {
   if (!v) return '—';
   const d = new Date(String(v).length === 10 ? `${v}T12:00:00` : String(v));
-  return new Intl.DateTimeFormat(locale(), { year: 'numeric', month: '2-digit', day: '2-digit', timeZone: 'Asia/Riyadh' }).format(d);
+  // strip the bidi marks Intl adds: inside LTR number cells they flip the order (e.g. "102026/05/")
+  return new Intl.DateTimeFormat(locale(), { year: 'numeric', month: '2-digit', day: '2-digit', timeZone: 'Asia/Riyadh' }).format(d).replace(/[\u200e\u200f\u061c]/g, '');
 }
 
 export function dateTime(v: unknown) {

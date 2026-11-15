@@ -2,9 +2,10 @@
 // A drop-in stand-in for the supabase-js client: the real Postgres schema, accounting engine,
 // RLS policies and API functions run inside the browser (PGlite / WASM), persisted in IndexedDB.
 // Every query is executed as role `authenticated` with the signed-in user's id — exactly like PostgREST.
-import { SCHEMA_SQL, SEED_SQL } from './sql.generated';
+import { DEMO_VERSION, SCHEMA_SQL, SEED_SQL } from './sql.generated';
 
-const DB_NAME = 'idb://asf-demo-v1';
+// A new schema or seed gets a fresh in-browser database instead of reusing an outdated one.
+const DB_NAME = `idb://asf-demo-${DEMO_VERSION}`;
 // Demo-only stand-in for pgcrypto's crypt()/gen_salt() (salted md5) — never used against a real database.
 const DEMO_CRYPT = `create schema if not exists extensions;
 create or replace function extensions.gen_salt(t text) returns text language sql volatile as $$ select 'demo$' || substr(md5(random()::text), 1, 12) $$;
@@ -50,7 +51,7 @@ export const db = () => (dbPromise ??= openDb());
 
 export async function resetDemo() {
   try { localStorage.removeItem(SESSION_KEY); } catch {}
-  await new Promise<void>(r => { const q = indexedDB.deleteDatabase('/pglite/asf-demo-v1'); q.onsuccess = q.onerror = q.onblocked = () => r(); });
+  await new Promise<void>(r => { const q = indexedDB.deleteDatabase(`/pglite/asf-demo-${DEMO_VERSION}`); q.onsuccess = q.onerror = q.onblocked = () => r(); });
   if (process.env.NEXT_PUBLIC_SPA === '1') { location.hash = '/login/'; location.reload(); } else location.href = '/login/';
 }
 
@@ -189,4 +190,16 @@ const storage = {
 
 export function createDemoClient() {
   return { from: (t: string) => new Query(t), rpc, auth, storage };
+}
+
+/** Demo stand-in for the live market feed: nudges each holding's price by up to ±1.5% (and optionally books the value). */
+export async function demoMarketTick(sync: boolean) {
+  const d = await db();
+  const r = await d.query(`update public.portfolio_holdings
+       set prev_close = coalesce(prev_close, last_price, avg_cost),
+           last_price = round(coalesce(last_price, avg_cost) * (1 + (random() - 0.5) * 0.03), 2), price_at = now()
+     returning symbol, last_price as price, prev_close`);
+  let synced = 0;
+  if (sync) synced = (await d.query(`select public.sync_all_portfolios() as n`)).rows[0].n;
+  return { updated: r.rows.length, failed: [] as string[], synced, demo: true };
 }

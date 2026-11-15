@@ -88,6 +88,12 @@ begin
                                     '2026-05-10', null, 5000, 'تجريبي', 'INV-EQ-04');
   perform public.record_investment_income(v_inv, 85, '2026-08-20', 'توزيعات نقدية');
   perform public.revalue_investment(v_inv, 4720, '2026-10-31', 'تقييم سوقي');
+  perform public.upsert_holding(v_inv, '2222', 'أرامكو', 60, 26.40);
+  perform public.upsert_holding(v_inv, '1120', 'الراجحي', 10, 98.00);
+  perform public.upsert_holding(v_inv, '7010', 'اس تي سي', 20, 40.00);
+  perform public.upsert_holding(v_inv, '2010', 'سابك', 10, 75.00);
+  perform public.set_portfolio_cash(v_inv, 886);
+  perform public.apply_market_prices('[{"symbol":"2222","price":26.64,"prev_close":26.50},{"symbol":"1120","price":96.20,"prev_close":97.00},{"symbol":"7010","price":41.52,"prev_close":41.20},{"symbol":"2010","price":68.10,"prev_close":69.00}]'::jsonb);
 
   -- ---------------- loans
   -- fully repaid

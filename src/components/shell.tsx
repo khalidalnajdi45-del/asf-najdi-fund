@@ -41,6 +41,7 @@ export const memberNav: NavItem[] = [
   { href: '/member/loans/', label: 'قروضي', icon: <HandCoins className={ic} /> },
   { href: '/member/transactions/', label: 'عملياتي', icon: <FileClock className={ic} /> },
   { href: '/member/reports/', label: 'تقاريري الشهرية', icon: <Mail className={ic} /> },
+  { href: '/member/investments/', label: 'استثمارات الصندوق', icon: <TrendingUp className={ic} /> },
   { href: '/member/statements/', label: 'كشوف الحساب', icon: <ScrollText className={ic} /> },
   { href: '/member/events/', label: 'المناسبات', icon: <PartyPopper className={ic} /> },
   { href: '/member/notifications/', label: 'الإشعارات', icon: <Bell className={ic} /> },

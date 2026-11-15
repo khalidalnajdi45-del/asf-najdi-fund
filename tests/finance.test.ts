@@ -412,3 +412,46 @@ describe('monthly member reports', () => {
   });
 });
 const n2 = (v: any) => Math.round(Number(v) * 100) / 100;
+
+describe('stock portfolio & members view', () => {
+  it('holdings, market prices, valuation sync and member visibility', async () => {
+    await s.as(manager);
+    const inv = await s.val(`select create_investment('محفظة الصندوق', 'equity', null, 'الأهلي المالية', $1::date, null, 500)`, [today]);
+    await s.q(`select upsert_holding($1, '2222', 'أرامكو', 10, 26)`, [inv]);
+    await s.q(`select upsert_holding($1, '4250', 'جبل عمر', 10, 15)`, [inv]);
+    await s.q(`select set_portfolio_cash($1, 90)`, [inv]);
+    expect(n(await s.val(`select portfolio_market_value($1)`, [inv]))).toBe(10 * 26 + 10 * 15 + 90);      // no prices yet → at cost
+    await expectFail(s.q(`select apply_market_prices('[{"symbol":"2222","price":30}]'::jsonb)`), /permission denied/);
+    await s.system();
+    expect(n(await s.val(`select apply_market_prices('[{"symbol":"2222","price":30,"prev_close":29},{"symbol":"4250","price":14,"prev_close":14.5}]'::jsonb)`))).toBe(2);
+    await s.as(manager);
+    const mv = 10 * 30 + 10 * 14 + 90;
+    expect(n(await s.val(`select portfolio_market_value($1)`, [inv]))).toBe(mv);
+    await s.q(`select sync_portfolio_valuation($1)`, [inv]);
+    expect(n(await s.val(`select current_value from v_investment_positions where id = $1`, [inv]))).toBe(mv);
+    expect(await s.val(`select sync_portfolio_valuation($1)`, [inv])).toBeNull();                      // unchanged → no entry
+    expect((await s.val(`select integrity_check()`) as any).ok).toBe(true);
+
+    // members: names & prices only by default
+    await s.as(aliUser);
+    expect((await s.q(`select * from portfolio_holdings`)).length).toBe(0);
+    const v: any = await s.val(`select member_investments()`);
+    const port = v.items.find((x: any) => x.id === inv);
+    expect(v.mode).toBe('names');
+    expect(port.value).toBeNull();
+    expect(port.holdings.map((h: any) => h.symbol).sort()).toEqual(['2222', '4250']);
+    expect(port.holdings.every((h: any) => h.quantity === null && h.market_value === null && n(h.price) > 0)).toBe(true);
+    await expectFail(s.q(`select set_member_investments_view('full')`), /مدير الصندوق فقط/);
+    await s.as(manager);
+    await s.q(`select set_member_investments_view('full')`);
+    await s.as(aliUser);
+    const f: any = await s.val(`select member_investments()`);
+    expect(n(f.items.find((x: any) => x.id === inv).holdings[0].quantity)).toBe(10);
+    await s.as(manager);
+    await s.q(`select set_member_investments_view('hidden')`);
+    await s.as(aliUser);
+    expect(((await s.val(`select member_investments()`)) as any).items.length).toBe(0);
+    await s.as(manager);
+    await s.q(`select set_member_investments_view('names')`);
+  });
+});
