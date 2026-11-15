@@ -10,7 +10,7 @@ export type ReportRow = {
 };
 
 const MONTHS_SHORT = ['ينا', 'فبر', 'مار', 'أبر', 'ماي', 'يون', 'يول', 'أغس', 'سبت', 'أكت', 'نوف', 'ديس'];
-const dotTone: Record<string, string> = { paid: 'bg-pos', partial: 'bg-gold-500', overdue: 'bg-neg', unpaid: 'bg-line-strong' };
+const dotTone: Record<string, string> = { paid: 'bg-pos', partial: 'bg-gold-500', overdue: 'bg-neg', unpaid: 'bg-line-strong', waived: 'bg-line' };
 
 /** The member-facing monthly account report. Renders a frozen snapshot — never live figures. */
 export function MonthlyReportView({ row }: { row: ReportRow }) {

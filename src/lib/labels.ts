@@ -2,7 +2,7 @@ export type Tone = 'neutral' | 'green' | 'amber' | 'red' | 'blue' | 'violet';
 
 export const statusLabels: Record<string, [string, Tone]> = {
   // contributions
-  paid: ['مسدد', 'green'], partial: ['مسدد جزئياً', 'amber'], unpaid: ['غير مسدد', 'neutral'], overdue: ['متأخر', 'red'],
+  paid: ['مسدد', 'green'], partial: ['مسدد جزئياً', 'amber'], unpaid: ['غير مسدد', 'neutral'], overdue: ['متأخر', 'red'], waived: ['معفى', 'neutral'],
   // loans
   pending: ['قيد المراجعة', 'amber'], approved: ['معتمد', 'blue'], rejected: ['مرفوض', 'red'], disbursed: ['مصروف', 'violet'],
   active: ['نشط', 'green'], fully_repaid: ['مسدد بالكامل', 'neutral'], cancelled: ['ملغي', 'neutral'],

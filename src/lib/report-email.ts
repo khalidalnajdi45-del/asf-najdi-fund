@@ -16,7 +16,7 @@ const C = { plum: '#2A1733', plum2: '#4A2A5A', gold: '#B8925A', goldLight: '#D6B
   ink: '#2A1733', muted: '#7A6F80', line: '#E8E0D3', pos: '#3F6B4E', neg: '#A8654A', goldBg: '#F3EAD9' };
 
 const MONTHS = ['يناير', 'فبراير', 'مارس', 'أبريل', 'مايو', 'يونيو', 'يوليو', 'أغسطس', 'سبتمبر', 'أكتوبر', 'نوفمبر', 'ديسمبر'];
-const STATUS: Record<string, string> = { paid: 'مسدد', partial: 'مسدد جزئياً', overdue: 'متأخر', unpaid: 'غير مسدد',
+const STATUS: Record<string, string> = { paid: 'مسدد', partial: 'مسدد جزئياً', overdue: 'متأخر', unpaid: 'غير مسدد', waived: 'معفى',
   active: 'نشط', disbursed: 'مصروف', overdue_loan: 'متأخر' };
 const TX: Record<string, string> = { contribution_payment: 'اشتراك شهري', deposit: 'إيداع اختياري', withdrawal_payment: 'صرف سحب وديعة',
   loan_disbursement: 'صرف قرض', loan_repayment: 'سداد قرض', manual_journal: 'قيد يدوي' };

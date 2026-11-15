@@ -464,3 +464,21 @@ describe('scheduled jobs post as the system actor', () => {
     expect(await s.val(`select created_by::text from financial_transactions order by created_at desc limit 1`)).toBe('00000000-0000-4000-8000-00000000a5f1');
   });
 });
+
+describe('waived contributions', () => {
+  it('waived months are not owed or overdue, and can be restored', async () => {
+    await s.as(manager);
+    await s.system();
+    await s.q(`insert into contributions(member_id, period, amount_due, due_date) values ($1, '2020-01-01', 200, '2020-01-10') on conflict do nothing`, [ali]);
+    await s.as(manager);
+    const c: any = await s.one(`select id, member_id from v_contribution_status where member_id = $1 and period = '2020-01-01'`, [ali]);
+    const before = n(await s.val(`select contributions_overdue from v_member_balances where member_id = $1`, [c.member_id]));
+    await s.q(`select waive_contribution($1, 'إعفاء من المدير')`, [c.id]);
+    const r: any = await s.one(`select status, is_overdue, amount_outstanding from v_contribution_status where id = $1`, [c.id]);
+    expect([r.status, r.is_overdue, n(r.amount_outstanding)]).toEqual(['waived', false, 0]);
+    expect(n(await s.val(`select contributions_overdue from v_member_balances where member_id = $1`, [c.member_id]))).toBeLessThan(before);
+    await expectFail(s.q(`select record_contribution_payment($1, (select period from contributions where id = $2), 200, $3::date)`, [c.member_id, c.id, today]), /مسدد بالكامل/);
+    await s.q(`select waive_contribution($1, null, true)`, [c.id]);
+    expect(await s.val(`select status from v_contribution_status where id = $1`, [c.id])).toBe('overdue');
+  });
+});

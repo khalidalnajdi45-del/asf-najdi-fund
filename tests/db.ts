@@ -5,7 +5,7 @@ import { join } from 'node:path';
 
 const root = join(__dirname, '..');
 export const MIGRATIONS = readdirSync(join(root, 'supabase/migrations')).filter(f => /^\d{4}_.*\.sql$/.test(f)).sort();
-const SUPABASE_ONLY = new Set(['0007_platform.sql', '0010_platform_reports.sql', '0012_platform_email.sql', '0013_platform_email_assets.sql', '0016_platform_prices.sql']);
+const SUPABASE_ONLY = new Set(['0007_platform.sql', '0010_platform_reports.sql', '0012_platform_email.sql', '0013_platform_email_assets.sql', '0016_platform_prices.sql', '0019_platform_monthly_valuation.sql']);
 
 export async function freshDb() {
   const db = new PGlite({ extensions: { pgcrypto } });

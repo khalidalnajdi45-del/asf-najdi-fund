@@ -17,6 +17,8 @@ export default function ContributionsPage() {
   const [year, setYear] = useState(Number(today().slice(0, 4)));
   const [pay, setPay] = useState<any>(null);
   const gen = useAction();
+  const wv = useAction();
+  const waive = (r: any, undo: boolean) => wv.run(() => rpc('waive_contribution', { p_id: r.id, p_note: null, p_undo: undo }).then(() => true), undo ? 'تم إلغاء الإعفاء' : 'تم إعفاء الشهر').then(ok => { if (ok) list.reload(); });
   const list = useData<any[]>(() => q(supabase().from('v_contribution_status').select('*').eq('period', `${month}-01`).order('member_no')), [month]);
   const matrix = useData<any[]>(() => (tab === 'year' ? rpc('report_contribution_matrix', { p_year: year }) : Promise.resolve([])), [tab, year]);
   const rows = list.data ?? [];
@@ -70,7 +72,12 @@ export default function ContributionsPage() {
                 { key: 'amount_paid', header: 'المسدد', align: 'end', render: r => sar(r.amount_paid) },
                 { key: 'status', header: 'الحالة', render: r => <Badge status={r.status} /> },
                 { key: 'last_paid_on', header: 'تاريخ الدفع', render: r => date(r.last_paid_on) },
-                { key: 'act', header: '', render: r => r.status !== 'paid' && <Button size="sm" variant="secondary" onClick={() => setPay(r)}>تسجيل</Button> },
+                { key: 'act', header: '', render: r => r.status === 'waived'
+                    ? <Button size="sm" variant="ghost" disabled={wv.busy} onClick={() => waive(r, true)}>إلغاء الإعفاء</Button>
+                    : r.status !== 'paid' && <span className="flex justify-end gap-1.5">
+                        <Button size="sm" variant="secondary" onClick={() => setPay(r)}>تسجيل</Button>
+                        {r.status !== 'partial' && <Button size="sm" variant="ghost" disabled={wv.busy} onClick={() => waive(r, false)} title="لا يُطالب العضو بهذا الشهر ولا يظهر متأخراً">إعفاء</Button>}
+                      </span> },
               ]} />
           </Card>
         </>
@@ -98,7 +105,7 @@ export default function ContributionsPage() {
                         const c = m.months[i + 1];
                         return <td key={i} className="px-1 py-2 text-center">
                           {c ? <span title={`${sar(c.paid)} / ${sar(c.due)}`} className={clsx('inline-block size-5 rounded',
-                            c.status === 'paid' && 'bg-brand-500', c.status === 'partial' && 'bg-gold-300', c.status === 'overdue' && 'bg-clay/70', c.status === 'unpaid' && 'bg-line-strong')} /> : <span className="text-line-strong">·</span>}
+                            c.status === 'paid' && 'bg-brand-500', c.status === 'partial' && 'bg-gold-300', c.status === 'overdue' && 'bg-clay/70', c.status === 'unpaid' && 'bg-line-strong', c.status === 'waived' && 'bg-line')} /> : <span className="text-line-strong">·</span>}
                         </td>;
                       })}
                       <td className="px-3 py-2 text-left num-cell">{sar(m.total_paid)}</td>

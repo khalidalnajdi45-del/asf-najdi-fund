@@ -120,7 +120,7 @@ export function PortfolioCard({ p, onBooked }: { p: any; onBooked: () => void })
           <span className="text-ink-2">
             القيمة في الدفاتر <bdi className="num font-semibold">{sar(p.current_value)}</bdi>
             {Math.abs(bookGap) >= 0.01
-              ? <> · الفرق عن السوق <bdi className={bookGap > 0 ? 'text-pos' : 'text-neg'}>{sar(bookGap, { sign: true })}</bdi> — يُرحَّل تلقائياً بعد إغلاق السوق يومياً</>
+              ? <> · الفرق عن السوق <bdi className={bookGap > 0 ? 'text-pos' : 'text-neg'}>{sar(bookGap, { sign: true })}</bdi> — يُرحَّل تلقائياً بنهاية كل شهر</>
               : <> · <span className="text-pos">مطابقة لقيمة السوق ✓</span></>}
           </span>
           <Button size="sm" variant="secondary" icon={<BookCheck className="size-4" />} loading={busy === 'book'} disabled={Math.abs(bookGap) < 0.01 || !!busy} onClick={book}>ترحيل التقييم للدفاتر الآن</Button>
