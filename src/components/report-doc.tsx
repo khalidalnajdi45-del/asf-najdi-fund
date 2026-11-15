@@ -45,7 +45,7 @@ const cellText = (c: Cell, money: boolean) => {
 export function ReportView({ doc, fundName }: { doc: Doc; fundName?: string }) {
   const name = fundName || FUND;
   return (
-    <div className="print-area report-doc space-y-4">
+    <div data-pdf className="print-area report-doc space-y-4">
       {doc.cover && <CoverPage cover={doc.cover} contents={doc.contents} />}
       <header className="rounded-xl border border-line bg-surface p-5">
         <div className="flex flex-wrap items-center justify-between gap-4">
@@ -61,7 +61,7 @@ export function ReportView({ doc, fundName }: { doc: Doc; fundName?: string }) {
         {doc.note && <p className="mt-3 text-xs text-muted">{doc.note}</p>}
       </header>
       {doc.sections.map((sec, si) => (
-        <section key={si} className={clsx('report-sec overflow-hidden rounded-xl border border-line bg-surface', sec.breakBefore && 'print-break-before')}>
+        <section key={si} className={clsx('report-sec overflow-hidden rounded-xl border border-line bg-surface', sec.breakBefore && 'print-break-before', sec.rows.length + (sec.paras?.length ?? 0) * 2 < 28 && 'avoid-break')}>
           <div className="flex items-center gap-3 border-b border-line px-4 py-3">
             <span className="h-5 w-1 rounded bg-gold-500" />
             <h3 className="text-[15px] font-semibold text-brand-700">{sec.title}</h3>

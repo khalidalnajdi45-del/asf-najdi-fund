@@ -198,11 +198,112 @@ async function plainXlsx(filename: string, sheets: BrandedSheet[]) {
 
 export const n2 = (v: unknown) => Math.round(num(v) * 100) / 100;
 
-/** PDF export: the browser's print dialog ("Save as PDF"); branded via the print stylesheet + PrintBrand header. */
-export function printPdf(title?: string) {
-  const prev = document.title;
-  if (title) document.title = title;
-  document.documentElement.classList.add('printing');
-  window.print();
-  setTimeout(() => { document.title = prev; document.documentElement.classList.remove('printing'); }, 500);
+function loadScript(src: string, global: string): Promise<any> {
+  if ((window as any)[global]) return Promise.resolve((window as any)[global]);
+  return new Promise((res, rej) => {
+    const s = document.createElement('script');
+    s.src = src; s.async = false;
+    s.onload = () => (window as any)[global] ? res((window as any)[global]) : rej(new Error(global));
+    s.onerror = () => rej(new Error('تعذر تحميل مكتبة PDF'));
+    document.head.appendChild(s);
+  });
+}
+let h2p: Promise<any> | null = null;
+/** html2pdf (non-bundled) on top of jsPDF + html2canvas-pro (the latter understands Tailwind v4 oklch/oklab colours). */
+function loadHtml2Pdf(): Promise<any> {
+  if (!h2p) {
+    h2p = Promise.all([
+      loadScript('https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js', 'jspdf'),
+      loadScript('https://cdn.jsdelivr.net/npm/html2canvas-pro@1.5.8/dist/html2canvas-pro.min.js', 'html2canvas'),
+    ]).then(() => loadScript('https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.min.js', 'html2pdf'))
+      .catch(e => { h2p = null; throw e; });
+  }
+  return h2p;
+}
+
+/** Footer strip (fund name · page x of n) drawn on a canvas so Arabic shapes correctly, then stamped on each PDF page. */
+function footerImage(page: number, pages: number, widthMm: number) {
+  const scale = 8, w = Math.round(widthMm * scale), h = 6 * scale;
+  const c = document.createElement('canvas'); c.width = w; c.height = h;
+  const g = c.getContext('2d')!;
+  g.fillStyle = '#ffffff'; g.fillRect(0, 0, w, h);
+  g.fillStyle = '#e9dfcf'; g.fillRect(0, 0, w, 2);
+  g.font = `${2.6 * scale}px "IBM Plex Sans Arabic", Arial, sans-serif`;
+  g.textBaseline = 'middle';
+  g.direction = 'rtl'; g.textAlign = 'right'; g.fillStyle = '#8a6a3c';
+  g.fillText(FUND, w, h / 2 + 2);
+  g.direction = 'rtl'; g.textAlign = 'left'; g.fillStyle = '#736a74';
+  g.fillText(`صفحة ${page} من ${pages}`, 0, h / 2 + 2);
+  return c.toDataURL('image/png');
+}
+
+function busy(on: boolean, text = 'جاري تجهيز ملف PDF…') {
+  let el = document.getElementById('pdf-busy');
+  if (on && el) el.textContent = text;
+  if (on && !el) {
+    el = document.createElement('div'); el.id = 'pdf-busy';
+    el.textContent = text;
+    el.setAttribute('style', 'position:fixed;inset:auto 0 24px 0;margin:auto;width:max-content;z-index:9999;background:#2a1733;color:#fff;padding:10px 18px;border-radius:999px;font:14px "IBM Plex Sans Arabic",sans-serif;box-shadow:0 6px 20px rgba(0,0,0,.2)');
+    document.body.appendChild(el);
+  } else if (!on) el?.remove();
+}
+
+/**
+ * PDF export: renders the page's printable area ([data-pdf], else <main>) straight to a downloaded A4 PDF
+ * with the fund identity (brand header, page breaks, footer with page numbers). Falls back to the print dialog if offline.
+ */
+export async function printPdf(title?: string, target?: HTMLElement | null) {
+  const el = target ?? document.querySelector<HTMLElement>('[data-pdf]') ?? document.querySelector<HTMLElement>('main');
+  if (!el) return;
+  busy(true);
+  const root = document.documentElement;
+  let html2pdf: any;
+  try { html2pdf = await loadHtml2Pdf(); }
+  catch {
+    busy(false);
+    const prev = document.title;
+    if (title) document.title = title;
+    window.print();
+    setTimeout(() => { document.title = prev; }, 500);
+    return;
+  }
+  let failed = false;
+  const pinned: [HTMLElement, string, string, string][] = [];
+  try {
+    await document.fonts?.ready;
+    root.classList.add('pdf-export');
+    // html2canvas has weak bidi: pin purely numeric cells (dates, amounts) to LTR so "15/11/2026" isn't scrambled
+    el.querySelectorAll<HTMLElement>('td, th, span, div, p').forEach(n => {
+      if (n.children.length === 0 && /^[\d\s/.:,()\-+%]+$/.test(n.textContent ?? '') && /\d/.test(n.textContent ?? '')) {
+        const cs = getComputedStyle(n);
+        const align = cs.textAlign === 'start' ? (cs.direction === 'rtl' ? 'right' : 'left') : cs.textAlign === 'end' ? (cs.direction === 'rtl' ? 'left' : 'right') : cs.textAlign;
+        pinned.push([n, n.style.direction, n.style.unicodeBidi, n.style.textAlign]);
+        n.style.textAlign = align; n.style.direction = 'ltr'; n.style.unicodeBidi = 'isolate';
+      }
+    });
+    const margin = [12, 12, 16, 12];
+    const worker = html2pdf().set({
+      margin, filename: `${(title || document.title || FUND).replace(/[\\/:*?"<>|]/g, '-')}.pdf`,
+      image: { type: 'jpeg', quality: 0.96 },
+      html2canvas: { scale: 2, useCORS: true, backgroundColor: '#ffffff', logging: false, windowWidth: 900 },
+      jsPDF: { unit: 'mm', format: 'a4', orientation: 'portrait', compress: true },
+      pagebreak: { mode: ['css', 'legacy'], before: '.print-break-before', avoid: ['tr', 'p', '.report-sign', '.avoid-break', 'h3'] },
+    }).from(el).toPdf();
+    const pdf = await worker.get('pdf');
+    const n = pdf.internal.getNumberOfPages();
+    const pw = pdf.internal.pageSize.getWidth(), ph = pdf.internal.pageSize.getHeight();
+    for (let i = 1; i <= n; i++) {
+      pdf.setPage(i);
+      pdf.addImage(footerImage(i, n, pw - margin[1] - margin[3]), 'PNG', margin[3], ph - 11, pw - margin[1] - margin[3], 6);
+    }
+    download(pdf.output('blob'), `${(title || document.title || FUND).replace(/[\\/:*?"<>|]/g, '-')}.pdf`);
+  } catch (e) {
+    console.error('pdf export', e);
+    failed = true;
+  } finally {
+    root.classList.remove('pdf-export');
+    pinned.forEach(([n, d, u, a]) => { n.style.direction = d; n.style.unicodeBidi = u; n.style.textAlign = a; });
+    if (failed) { busy(true, 'تعذر إنشاء ملف PDF — حاول مرة أخرى'); setTimeout(() => busy(false), 4000); }
+    else busy(false);
+  }
 }

@@ -82,12 +82,24 @@ body { font-family: var(--font-sans); font-feature-settings: "tnum" 1; -webkit-f
   .report-doc td, .report-doc th { padding-top: 5px !important; padding-bottom: 5px !important; }
   .report-doc h3 { break-after: avoid; }
   .report-doc .report-sec > div:first-child { break-after: avoid; }
-  .report-sign { break-inside: avoid; }
+  .report-sign, .avoid-break { break-inside: avoid; }
   .fs-cover { height: 262mm; box-sizing: border-box; overflow: hidden; border-radius: 0 !important; padding: 18mm 16mm !important; display: flex; flex-direction: column; break-after: page; }
   .fs-cover-body { margin-top: auto !important; margin-bottom: 18mm; }
   .fs-cover > .grid { margin-top: 0 !important; }
 }
 .print-only { display: none; }
+
+/* Direct PDF download (html2pdf): same look as print, rendered off the live DOM */
+.pdf-export .no-print { display: none !important; }
+.pdf-export .print-only { display: block !important; }
+.pdf-export [data-pdf], .pdf-export [data-pdf] * { -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+.pdf-export [data-pdf] { background: #fff; }
+.pdf-export .report-doc .scroll-thin { overflow: visible !important; }
+.pdf-export .report-doc table { font-size: 11px !important; }
+.pdf-export .report-doc td, .pdf-export .report-doc th { padding-top: 5px !important; padding-bottom: 5px !important; }
+.pdf-export .fs-cover { height: 266mm; border-radius: 0 !important; padding: 18mm 16mm !important; display: flex; flex-direction: column; box-sizing: border-box; overflow: hidden; }
+.pdf-export .fs-cover-body { margin-top: auto !important; margin-bottom: 18mm; }
+.pdf-export .fs-cover > .grid { margin-top: 0 !important; }
 
 /* ASF Shurfa pattern — subtle texture on Night Plum surfaces */
 .shurfa { isolation: isolate; }

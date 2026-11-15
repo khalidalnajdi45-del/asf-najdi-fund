@@ -2,7 +2,7 @@
 import { go } from '@/lib/nav';
 import { useEffect, useState } from 'react';
 import clsx from 'clsx';
-import { Download, FileText, Printer } from 'lucide-react';
+import { Download, FileText, Printer , FileDown } from 'lucide-react';
 import { rpc, supabase, cleanError } from '@/lib/supabase';
 import { q } from '@/lib/hooks';
 import { date, dateTime, firstOfMonth, lastOfMonth, monthLabel, num, pct, sar, today } from '@/lib/format';
@@ -88,7 +88,7 @@ export default function ReportsPage() {
               ? <Button disabled={!member} onClick={() => (go(`/admin/statement/?member=${member}`))}>فتح كشف الحساب</Button>
               : <div className="mr-auto flex gap-2">
                   <Button variant="secondary" icon={<Download className="size-4" />} disabled={!doc} loading={xl} onClick={toExcel}>Excel</Button>
-                  <Button variant="secondary" icon={<Printer className="size-4" />} disabled={!doc} onClick={() => printPdf(doc?.title)}>PDF</Button>
+                  <Button variant="secondary" icon={<FileDown className="size-4" />} disabled={!doc} onClick={() => printPdf(doc?.title)}>تنزيل PDF</Button>
                 </div>}
           </div>
           {key === 'statement' && <Card><p className="text-sm text-muted">اختر العضو لعرض كشف حسابه الكامل (الاشتراكات، الودائع، القروض، والعمليات) مع إمكانية التصدير والطباعة.</p></Card>}

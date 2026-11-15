@@ -1,7 +1,7 @@
 'use client';
 import { useEffect } from 'react';
 import clsx from 'clsx';
-import { Printer } from 'lucide-react';
+import { Printer , FileDown } from 'lucide-react';
 import { rpc, supabase } from '@/lib/supabase';
 import { q, useData, useParam } from '@/lib/hooks';
 import { go } from '@/lib/nav';
@@ -25,7 +25,7 @@ export default function MemberReports() {
   return (
     <>
       <PageHeader title="تقاريري الشهرية" subtitle="ملخص حسابك يصدر أول كل شهر — اشتراكات، ودائع، قروض"
-        actions={current && <Button variant="secondary" icon={<Printer className="size-4" />} onClick={() => printPdf(`تقرير-${current.report.period_label}`)}>طباعة / PDF</Button>} />
+        actions={current && <Button variant="secondary" icon={<FileDown className="size-4" />} onClick={() => printPdf(`تقرير-${current.report.period_label}`)}>تنزيل PDF</Button>} />
       <ErrorBox>{list.error}</ErrorBox>
       {!rows.length ? <Card><Empty>لم يصدر لك تقرير بعد — يصدر التقرير أول كل شهر</Empty></Card> : (
         <div className="grid gap-5 lg:grid-cols-[220px_1fr]">

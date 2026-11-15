@@ -1,7 +1,7 @@
 'use client';
 import { rpc, supabase } from './supabase';
 import { q } from './hooks';
-import { date, num, today } from './format';
+import { num, today } from './format';
 import { categoryLabel, type Settings } from './settings';
 import type { Cell, Doc, RowStyle, Section } from '@/components/report-doc';
 
@@ -211,5 +211,8 @@ export async function buildFinancialStatements(year: number, s: Settings, fundNa
   };
 }
 
+const MONTHS = ['يناير', 'فبراير', 'مارس', 'أبريل', 'مايو', 'يونيو', 'يوليو', 'أغسطس', 'سبتمبر', 'أكتوبر', 'نوفمبر', 'ديسمبر'];
+/** Long Arabic date (15 نوفمبر 2026) — reads well in statements and survives PDF rendering. */
+const date = (d: string) => { const [y, m, dd] = d.slice(0, 10).split('-').map(Number); return `${dd} ${MONTHS[m - 1]} ${y}`; };
 const fmt = (v: number) => v.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
 const fmtS = (v: number) => `${fmt(v)} ر.س`;

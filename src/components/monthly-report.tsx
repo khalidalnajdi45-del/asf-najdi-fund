@@ -18,7 +18,7 @@ export function MonthlyReportView({ row }: { row: ReportRow }) {
   const c = r.contribution ?? {}, d = r.deposits ?? {}, l = r.loans ?? {};
   const month = c.month;
   return (
-    <article className="print-area overflow-hidden rounded-2xl border border-line bg-surface">
+    <article data-pdf className="print-area overflow-hidden rounded-2xl border border-line bg-surface">
       <header className="shurfa relative overflow-hidden bg-brand-900 px-6 py-6 text-white sm:px-8">
         <img src="/brand/mark-plum.svg" alt="" aria-hidden className="pointer-events-none absolute -bottom-10 -left-6 w-48 opacity-60" />
         <div className="relative flex flex-wrap items-start justify-between gap-4">

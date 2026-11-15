@@ -1,6 +1,6 @@
 'use client';
 import { useState } from 'react';
-import { Download, Printer } from 'lucide-react';
+import { Download, Printer , FileDown } from 'lucide-react';
 import { rpc } from '@/lib/supabase';
 import { useData } from '@/lib/hooks';
 import { date, dateTime, monthLabel, sar, today } from '@/lib/format';
@@ -33,13 +33,13 @@ export function Statement({ memberId }: { memberId: string }) {
         <Field label="إلى"><Input type="date" value={to} max={today()} onChange={e => setTo(e.target.value)} /></Field>
         <div className="mr-auto flex gap-2">
           <Button variant="secondary" icon={<Download className="size-4" />} onClick={toExcel} disabled={!s}>Excel</Button>
-          <Button icon={<Printer className="size-4" />} onClick={() => printPdf(`كشف حساب ${s?.member.full_name ?? ''}`)} disabled={!s}>تنزيل PDF</Button>
+          <Button icon={<FileDown className="size-4" />} onClick={() => printPdf(`كشف حساب ${s?.member.full_name ?? ''}`)} disabled={!s}>تنزيل PDF</Button>
         </div>
       </div>
       <ErrorBox>{d.error}</ErrorBox>
       {d.loading && !s && <Loading />}
       {s && (
-        <div className="space-y-4">
+        <div data-pdf className="space-y-4">
           <PrintBrand title={`كشف حساب عضو — ${s.member.full_name}`} subtitle={`${from} — ${to}`} />
           <Card>
             <div className="flex flex-wrap items-start justify-between gap-3">

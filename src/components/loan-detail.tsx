@@ -1,6 +1,6 @@
 'use client';
 import { useEffect, useState } from 'react';
-import { Banknote, Check, Download, Printer, X } from 'lucide-react';
+import { Banknote, Check, Download, Printer, X , FileDown } from 'lucide-react';
 import { rpc, newKey, supabase } from '@/lib/supabase';
 import { q, useData, useParam } from '@/lib/hooks';
 import { useAction } from '@/lib/action';
@@ -54,7 +54,7 @@ export function LoanDetail({ admin }: { admin: boolean }) {
         subtitle={admin ? <a className="hover:text-brand-600" href={`/admin/members/view/?id=${l.member_id}`}>{l.member_name}</a> : l.purpose}
         actions={<>
           {l.disbursement_tx_id && <Button variant="secondary" icon={<Download className="size-4" />} onClick={exportStatement}>Excel</Button>}
-          {l.disbursement_tx_id && <Button variant="secondary" icon={<Printer className="size-4" />} onClick={() => printPdf(`كشف القرض ${l.loan_no}`)}>PDF</Button>}
+          {l.disbursement_tx_id && <Button variant="secondary" icon={<FileDown className="size-4" />} onClick={() => printPdf(`كشف القرض ${l.loan_no}`)}>PDF</Button>}
           {admin && l.status === 'pending' && <>
             <Button icon={<Check className="size-4" />} onClick={() => setApprove(true)}>اعتماد</Button>
             <Button variant="danger" icon={<X className="size-4" />} onClick={() => setReject(true)}>رفض</Button></>}
