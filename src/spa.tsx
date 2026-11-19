@@ -99,7 +99,7 @@ document.addEventListener('click', e => {
 function App() {
   const [hash, setHash] = useState(location.hash);
   useEffect(() => {
-    const f = () => { setHash(location.hash); window.scrollTo(0, 0); };
+    const f = () => { setHash(location.hash); window.scrollTo(0, 0); document.getElementById('app-scroll')?.scrollTo(0, 0); };
     window.addEventListener('hashchange', f);
     return () => window.removeEventListener('hashchange', f);
   }, []);

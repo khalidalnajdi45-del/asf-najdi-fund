@@ -18,7 +18,7 @@ export default function MembersPage() {
     return (bal as any[]).map(b => ({ ...b, username: u.get(b.member_id) ?? null }));
   });
   const [open, setOpen] = useState(false);
-  const [created, setCreated] = useState<{ name: string; username: string; password: string } | null>(null);
+  const [created, setCreated] = useState<{ name: string; username: string; password: string; memberId: string; email: string | null } | null>(null);
   const a = useAction();
   const blank = () => ({ name: '', username: '', email: '', phone: '', join: today(), password: genPassword(), notes: '' });
   const [f, setF] = useState(blank());
@@ -28,7 +28,7 @@ export default function MembersPage() {
       p_full_name: f.name, p_username: f.username.trim().toLowerCase(), p_password: f.password, p_email: f.email.trim() || null,
       p_phone: f.phone || null, p_join_date: f.join, p_notes: f.notes || null,
     }), 'تم إنشاء حساب العضو');
-    if (r) { setCreated({ name: f.name.trim(), username: f.username.trim().toLowerCase(), password: f.password }); setOpen(false); reload(); setF(blank()); }
+    if (r) { setCreated({ name: f.name.trim(), username: f.username.trim().toLowerCase(), password: f.password, memberId: String(r), email: f.email.trim() || null }); setOpen(false); reload(); setF(blank()); }
   };
 
   const exportList = () => exportXlsx('الأعضاء', [{

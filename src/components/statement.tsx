@@ -3,7 +3,7 @@ import { useState } from 'react';
 import { Download, Printer , FileDown } from 'lucide-react';
 import { rpc } from '@/lib/supabase';
 import { useData } from '@/lib/hooks';
-import { date, dateTime, monthLabel, sar, today } from '@/lib/format';
+import { date, dateTime, monthLabel, sar, today, stripMemberName } from '@/lib/format';
 import { statusLabels, txTypeLabels } from '@/lib/labels';
 import { PrintBrand } from './report-doc';
 import { exportXlsx, n2, printPdf } from '@/lib/export';
@@ -21,7 +21,7 @@ export function Statement({ memberId }: { memberId: string }) {
       ['إجمالي الاشتراكات (تراكمي)', n2(s.balances.contributions_total)], ['رصيد الودائع', n2(s.balances.deposit_balance)],
       ['القروض القائمة', n2(s.balances.loan_outstanding)], ['اشتراكات متأخرة', n2(s.balances.contributions_overdue)]] },
     { name: 'العمليات', header: ['رقم العملية', 'التاريخ', 'النوع', 'البيان', 'المبلغ', 'المرجع', 'ملاحظة'],
-      rows: s.transactions.map((t: any) => [t.tx_no, t.date, txTypeLabels[t.type], t.description, n2(t.amount), t.reference, t.is_reversed ? 'معكوسة' : '']) },
+      rows: s.transactions.map((t: any) => [t.tx_no, t.date, txTypeLabels[t.type], stripMemberName(t.description, s.member.full_name), n2(t.amount), t.reference, t.is_reversed ? 'معكوسة' : '']) },
     { name: 'الاشتراكات', header: ['الشهر', 'المستحق', 'المسدد', 'الحالة'],
       rows: s.contributions.map((c: any) => [c.period, n2(c.due), n2(c.paid), statusLabels[c.status]?.[0]]) },
   ]);
@@ -60,7 +60,7 @@ export function Statement({ memberId }: { memberId: string }) {
                 ['رصيد الودائع الاختيارية', <span className="num">{sar(s.balances.deposit_balance)}</span>],
                 ['سحوبات قيد التنفيذ', <span className="num">{sar(s.balances.withdrawals_pending)}</span>],
                 ['رصيد القروض القائم', <span className="num">{sar(s.balances.loan_outstanding)}</span>],
-                ['أرصدة أول الفترة (اشتراكات / ودائع / قروض)', <span className="num">{sar(s.opening.contributions)} / {sar(s.opening.deposits)} / {sar(s.opening.loans)}</span>],
+                ['رصيد القروض أول الفترة', <span className="num">{sar(s.opening.loans)}</span>],
               ]} />
             </div>
           </Card>
@@ -69,7 +69,7 @@ export function Statement({ memberId }: { memberId: string }) {
               { key: 'tx_no', header: 'رقم العملية', render: r => <span className="num text-xs text-muted">{r.tx_no}</span> },
               { key: 'date', header: 'التاريخ', render: r => date(r.date) },
               { key: 'type', header: 'النوع', render: r => <span className="flex gap-1.5">{txTypeLabels[r.type]}{r.is_reversed && <Tag tone="red">معكوسة</Tag>}</span> },
-              { key: 'description', header: 'البيان' },
+              { key: 'description', header: 'البيان', render: (t: any) => stripMemberName(t.description, s.member.full_name) },
               { key: 'amount', header: 'المبلغ', align: 'end', render: r => sar(r.amount) },
             ]} />
           </Card>

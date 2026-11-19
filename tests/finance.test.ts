@@ -230,6 +230,21 @@ describe('expenses, reversals, immutability', () => {
     expect(n(await s.sysVal(`select account_balance('operating_expenses')`))).toBe(35);
   });
 
+  it('lets the manager create and disburse a loan directly for a member', async () => {
+    await s.as(manager);
+    const lr0 = n(await s.sysVal(`select account_balance('loans_receivable')`));
+    const lid = await s.val(`select admin_create_loan($1, 1200, 6, 'monthly', 'سيارة', 0, null, true, $2::date, 'TRF-9', 'k-adm-loan')`, [sara, today]);
+    const l = await s.sysVal(`select jsonb_build_object('st', status, 'n', (select count(*) from loan_installments where loan_id = $1)) from loans where id = $1`, [lid]);
+    expect(l.st === 'disbursed' || l.st === 'active').toBe(true);
+    expect(Number(l.n)).toBe(6);
+    expect(n(await s.sysVal(`select account_balance('loans_receivable')`))).toBe(lr0 + 1200);
+    // idempotent
+    expect(await s.val(`select admin_create_loan($1, 1200, 6, 'monthly', 'سيارة', 0, null, true, $2::date, 'TRF-9', 'k-adm-loan')`, [sara, today])).toBe(lid);
+    await s.as(saraUser);
+    await expectFail(s.q(`select admin_create_loan($1, 100, 2)`, [sara]));
+    await s.as(manager);
+  });
+
   it('creates username logins and keeps the personal e-mail for mailings', async () => {
     await s.as(manager);
     const mid = await s.val(`select admin_create_member_v2('فهد النجدي', 'fahad', 'Asf-1234-Abcd', 'fahad@gmail.com', null, $1::date)`, [today]);

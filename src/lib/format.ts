@@ -68,3 +68,11 @@ export function lastOfMonth(offsetMonths = 0) {
 export const LOGIN_DOMAIN = 'members.najdi-fund.app';
 export const isLoginAlias = (e?: string | null) => !!e && e.toLowerCase().endsWith('@' + LOGIN_DOMAIN);
 export const loginName = (e?: string | null) => (isLoginAlias(e) ? e!.split('@')[0] : e ?? '');
+
+/** Transaction descriptions carry " — <member name>" for the general ledger; drop it inside a member's own views. */
+export function stripMemberName(desc: string | null | undefined, name?: string | null) {
+  const d = desc ?? '';
+  if (!name) return d.replace(/\s+—\s+[^—\d]+$/, '');
+  const esc = name.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+  return d.replace(new RegExp(`\\s*—\\s*${esc}\\s*$`), '');
+}

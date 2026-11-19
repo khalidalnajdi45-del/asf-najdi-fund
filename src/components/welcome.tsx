@@ -59,12 +59,12 @@ export function WelcomeSplash() {
   }, []);
   useEffect(() => {
     if (!show) return;
-    const t = setTimeout(() => setLeaving(true), 5600);
+    const t = setTimeout(() => setLeaving(true), 2600);
     return () => clearTimeout(t);
   }, [show]);
   useEffect(() => {
     if (!leaving) return;
-    const t = setTimeout(() => setShow(false), 700);
+    const t = setTimeout(() => setShow(false), 500);
     return () => clearTimeout(t);
   }, [leaving]);
 
@@ -80,7 +80,6 @@ export function WelcomeSplash() {
       <div className="relative mt-6 h-8 sm:h-9">
         <div key={key} className="asf-phrase text-lg text-white/90 sm:text-xl">{phrase}</div>
       </div>
-      <div className="asf-hint absolute bottom-8 text-xs text-brand-200">اضغط للمتابعة</div>
     </div>
   );
 }

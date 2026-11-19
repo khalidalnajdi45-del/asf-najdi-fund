@@ -88,6 +88,13 @@ body { font-family: var(--font-sans); font-feature-settings: "tnum" 1; -webkit-f
   .fs-cover > .grid { margin-top: 0 !important; }
 }
 .print-only { display: none; }
+.standalone, .standalone body { touch-action: manipulation; overscroll-behavior-y: none; }
+@media (max-width: 1023px) { .standalone input, .standalone select, .standalone textarea { font-size: 16px !important; } }
+.no-scrollbar { scrollbar-width: none; }
+.no-scrollbar::-webkit-scrollbar { display: none; }
+/* desktop: content scrolls in its own pane so each scrollbar sits on the area it moves */
+.app-scroll { scrollbar-width: thin; scrollbar-color: var(--color-line-strong) transparent; }
+@media print { .app-scroll, .app-scroll + * { height: auto !important; overflow: visible !important; } div:has(> #app-scroll) { height: auto !important; overflow: visible !important; } }
 
 /* Direct PDF download (html2pdf): same look as print, rendered off the live DOM */
 .pdf-export .no-print { display: none !important; }

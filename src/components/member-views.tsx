@@ -1,6 +1,6 @@
 'use client';
 import { go } from '@/lib/nav';
-import { date, dateTime, monthLabel, sar } from '@/lib/format';
+import { date, dateTime, monthLabel, sar, stripMemberName } from '@/lib/format';
 import { frequencyLabels, txTypeLabels } from '@/lib/labels';
 import { Badge, DataTable, Tag, type Column } from './ui';
 
@@ -65,7 +65,7 @@ export function TransactionsTable({ rows, loading, onReverse, showMember }: { ro
     { key: 'tx_date', header: 'التاريخ', render: r => date(r.tx_date) },
     { key: 'tx_type', header: 'النوع', render: r => <span className="flex items-center gap-1.5 whitespace-nowrap">{txTypeLabels[r.tx_type] ?? r.tx_type}{r.is_reversed && <Tag tone="red">معكوسة</Tag>}</span> },
     ...(showMember ? [{ key: 'member_name', header: 'العضو', render: (r: any) => r.member_name ?? '—' }] : []),
-    { key: 'description', header: 'الوصف', className: 'max-w-[280px] truncate' },
+    { key: 'description', header: 'الوصف', className: 'max-w-[280px] truncate', render: (r: any) => showMember ? r.description : stripMemberName(r.description, r.member_name) },
     { key: 'reference', header: 'المرجع', render: r => r.reference ? <span className="num text-xs">{r.reference}</span> : '—' },
     { key: 'amount', header: 'المبلغ', align: 'end', render: r => <span className={r.tx_type === 'reversal' ? 'text-neg' : ''}>{sar(r.amount)}</span> },
   ];

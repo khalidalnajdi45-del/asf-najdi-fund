@@ -1,7 +1,8 @@
 'use client';
 import { go } from '@/lib/nav';
 import { useState } from 'react';
-import { Download } from 'lucide-react';
+import { Download, Plus } from 'lucide-react';
+import { NewLoanModal } from '@/components/new-loan';
 import { supabase } from '@/lib/supabase';
 import { q, useData } from '@/lib/hooks';
 import { date, sar } from '@/lib/format';
@@ -13,6 +14,7 @@ import { RepaymentModal } from '@/components/ops';
 export default function LoansManagement() {
   const [tab, setTab] = useState('active');
   const [repay, setRepay] = useState<any>(null);
+  const [add, setAdd] = useState(false);
   const d = useData<any[]>(() => q(supabase().from('v_loan_summary').select('*').in('status', ['disbursed', 'active', 'overdue', 'fully_repaid']).order('disbursed_on', { ascending: false })));
   const rows = d.data ?? [];
   const live = rows.filter(r => ['disbursed', 'active', 'overdue'].includes(r.status));
@@ -27,7 +29,10 @@ export default function LoansManagement() {
   return (
     <>
       <PageHeader title="إدارة القروض" subtitle="القروض المصروفة وجداول السداد"
-        actions={<Button variant="secondary" icon={<Download className="size-4" />} onClick={exportList}>Excel</Button>} />
+        actions={<>
+          <Button icon={<Plus className="size-4" />} onClick={() => setAdd(true)}>قرض جديد</Button>
+          <Button variant="secondary" icon={<Download className="size-4" />} onClick={exportList}>Excel</Button></>} />
+      <NewLoanModal open={add} onClose={() => setAdd(false)} onDone={id => go(`/admin/loans/view/?id=${id}`)} />
       <div className="mb-4 grid grid-cols-2 gap-3 lg:grid-cols-4">
         <Stat label="الرصيد القائم" value={sar(sum(live, 'outstanding'))} tone="brand" hint={`${live.length} قرض نشط`} />
         <Stat label="المسدد من القروض النشطة" value={sar(sum(live, 'amount_repaid'))} />

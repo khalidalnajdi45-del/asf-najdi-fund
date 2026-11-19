@@ -51,7 +51,7 @@ Deno.serve(async req => {
   }
   if (!allowed) return json({ error: 'غير مصرح — هذه العملية لمدير الصندوق فقط' }, 401);
 
-  const body = await req.json().catch(() => ({})) as { period?: string; ids?: string[]; resend?: boolean; test_to?: string; message_id?: string; retry?: boolean };
+  const body = await req.json().catch(() => ({})) as { period?: string; ids?: string[]; resend?: boolean; test_to?: string; message_id?: string; retry?: boolean; credentials?: { member_id: string; username: string; password: string } };
   const { data: settings } = await admin.from('fund_settings').select('fund_name, monthly_report_email').eq('id', 1).single();
   if (byCron && settings && !settings.monthly_report_email) return json({ skipped: 'الإرسال بالبريد متوقف من الإعدادات' });
 
@@ -78,6 +78,28 @@ Deno.serve(async req => {
       if (!r.ok) throw new Error(`Resend ${r.status}: ${(await r.text()).slice(0, 200)}`);
     }
   };
+
+  // ---- login details for one member (manager only; username must match that member)
+  if (body.credentials) {
+    if (byCron) return json({ error: 'غير مصرح' }, 401);
+    const c = body.credentials;
+    const { data: m } = await admin.from('members').select('id, full_name, username').eq('id', c.member_id).maybeSingle();
+    if (!m || !m.username || m.username !== c.username || !c.password) return json({ error: 'بيانات الحساب غير مطابقة' }, 400);
+    const { data: to } = await admin.rpc('member_email', { p_member: m.id });
+    if (!to) return json({ error: 'لا يوجد بريد شخصي لهذا العضو — أضفه من «تعديل» أولاً' }, 400);
+    const portalUrl = env('PORTAL_URL') || 'https://khalidalnajdi45-del.github.io/asf-najdi-fund/';
+    const first = String(m.full_name).replace(/\(.*?\)/g, '').trim().split(/\s+/)[0];
+    try {
+      await send(to, buildMessageEmail({
+        subject: `بيانات دخولك — ${fundName}`,
+        body: `أهلاً ${first}،\n\nتم تجهيز حسابك في منصة ${fundName}، وتقدر منها تتابع اشتراكاتك وودائعك وقروضك وتقاريرك الشهرية.\n\nاسم المستخدم: ${m.username}\nكلمة المرور المؤقتة: ${c.password}\n\nسيُطلب منك اختيار كلمة مرور جديدة عند أول دخول. لا تشارك هذه البيانات مع أحد.`,
+        fields: {}, fund_name: fundName, portal_url: portalUrl, banner_src: bannerSrc,
+      }));
+      return json({ sent: true, to });
+    } catch (err) {
+      return json({ error: String((err as Error)?.message ?? err).slice(0, 300) }, 502);
+    }
+  }
 
   // ---- test message with sample figures (no member data involved)
   // ---- manager's message / reminder to selected members

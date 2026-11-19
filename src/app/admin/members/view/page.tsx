@@ -1,7 +1,7 @@
 'use client';
 import { go } from '@/lib/nav';
 import { useState } from 'react';
-import { CalendarPlus, FileText, KeyRound, Pencil, PiggyBank } from 'lucide-react';
+import { CalendarPlus, FileText, KeyRound, Pencil, PiggyBank, HandCoins } from 'lucide-react';
 import { rpc, supabase } from '@/lib/supabase';
 import { q, useData, useParam } from '@/lib/hooks';
 import { useAction } from '@/lib/action';
@@ -10,6 +10,7 @@ import { Badge, Button, Card, ErrorBox, Field, Input, KV, Loading, Modal, PageHe
 import { ContributionModal, DepositModal, ReverseModal } from '@/components/ops';
 import { ContributionsTable, DepositLedger, LoansTable, TransactionsTable } from '@/components/member-views';
 import { MemberLoginModal } from '@/components/member-login';
+import { NewLoanModal } from '@/components/new-loan';
 
 export default function MemberDetails() {
   const id = useParam('id');
@@ -18,6 +19,7 @@ export default function MemberDetails() {
   const [dep, setDep] = useState(false);
   const [edit, setEdit] = useState(false);
   const [pwd, setPwd] = useState(false);
+  const [loan, setLoan] = useState(false);
   const [rev, setRev] = useState<any>(null);
   const sb = supabase();
   const d = useData<any>(async () => {
@@ -49,6 +51,7 @@ export default function MemberDetails() {
           <Button variant="secondary" icon={<KeyRound className="size-4" />} onClick={() => setPwd(true)}>{m.user_id ? 'كلمة المرور' : 'إنشاء دخول'}</Button>
           <Button variant="secondary" icon={<FileText className="size-4" />} onClick={() => (go(`/admin/statement/?member=${id}`))}>كشف حساب</Button>
           <Button variant="secondary" icon={<PiggyBank className="size-4" />} onClick={() => setDep(true)} disabled={m.status !== 'active'}>إيداع</Button>
+          <Button variant="secondary" icon={<HandCoins className="size-4" />} onClick={() => setLoan(true)} disabled={m.status !== 'active'}>قرض</Button>
           <Button icon={<CalendarPlus className="size-4" />} onClick={() => setPay({})}>تسجيل اشتراك</Button>
         </>} />
 
@@ -85,6 +88,7 @@ export default function MemberDetails() {
       <DepositModal open={dep} onClose={() => setDep(false)} onDone={d.reload} memberId={id} />
       <ReverseModal tx={rev} onClose={() => setRev(null)} onDone={d.reload} />
       <EditMember open={edit} member={m} onClose={() => setEdit(false)} onDone={d.reload} />
+      <NewLoanModal open={loan} memberId={id} onClose={() => setLoan(false)} onDone={lid => go(`/admin/loans/view/?id=${lid}`)} />
       <MemberLoginModal open={pwd} member={m} onClose={() => setPwd(false)} onDone={d.reload} />
     </>
   );

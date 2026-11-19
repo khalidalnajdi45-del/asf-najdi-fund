@@ -1,6 +1,8 @@
 'use client';
 import { useEffect, useState } from 'react';
-import { Check, Copy, KeyRound, MessageCircle } from 'lucide-react';
+import { Check, Copy, KeyRound, Mail, MessageCircle } from 'lucide-react';
+import { sendCredentials } from '@/lib/report-mail';
+import { cleanError } from '@/lib/supabase';
 import { rpc } from '@/lib/supabase';
 import { useAction } from '@/lib/action';
 import { Button, ErrorBox, Field, Input, Modal, Notice } from './ui';
@@ -20,8 +22,15 @@ export function siteUrl() {
 }
 
 /** Credentials card shown once to the manager, with copy / WhatsApp share. */
-export function CredentialsCard({ name, username, password, onClose }: { name: string; username: string; password: string; onClose?: () => void }) {
+export function CredentialsCard({ name, username, password, onClose, memberId, email }: { name: string; username: string; password: string; onClose?: () => void; memberId?: string; email?: string | null }) {
   const [copied, setCopied] = useState(false);
+  const [mail, setMail] = useState<{ busy?: boolean; ok?: string; err?: string }>({});
+  const doMail = async () => {
+    if (!memberId) return;
+    setMail({ busy: true });
+    try { const r = await sendCredentials(memberId, username, password); setMail({ ok: r.demo ? 'النسخة التجريبية لا ترسل بريداً فعلياً' : `أُرسلت إلى ${r.to}` }); }
+    catch (e: any) { setMail({ err: cleanError(e.message) }); }
+  };
   const text = `السلام عليكم ${name}\nحسابك في منصة صندوق النجدي الادخاري:\nالرابط: ${siteUrl()}\nاسم المستخدم: ${username}\nكلمة المرور المؤقتة: ${password}\n(سيُطلب منك تغييرها عند أول دخول)`;
   const copy = async () => {
     try { await navigator.clipboard.writeText(text); setCopied(true); setTimeout(() => setCopied(false), 1800); } catch { /* user can select manually */ }
@@ -38,8 +47,13 @@ export function CredentialsCard({ name, username, password, onClose }: { name: s
         <Button size="sm" variant="secondary" icon={copied ? <Check className="size-4" /> : <Copy className="size-4" />} onClick={copy}>{copied ? 'تم النسخ' : 'نسخ الرسالة'}</Button>
         <a className="inline-flex h-9 items-center gap-2 rounded-lg border border-line bg-surface px-3 text-sm hover:bg-canvas" target="_blank" rel="noreferrer"
           href={`https://wa.me/?text=${encodeURIComponent(text)}`}><MessageCircle className="size-4" /> إرسال واتساب</a>
+        {memberId && <Button size="sm" variant="gold" icon={<Mail className="size-4" />} loading={mail.busy} disabled={!email || !!mail.ok} onClick={doMail}
+          title={email ? undefined : 'أضف البريد الشخصي للعضو أولاً'}>{mail.ok ? 'تم الإرسال' : 'إرسال بالإيميل'}</Button>}
         {onClose && <Button size="sm" variant="ghost" onClick={onClose}>إخفاء</Button>}
       </div>
+      {memberId && !email && <p className="mt-2 text-xs text-muted">لا يوجد بريد شخصي لهذا العضو — أضفه من «تعديل» لتتمكن من الإرسال بالإيميل.</p>}
+      {mail.ok && <p className="mt-2 text-xs text-pos">{mail.ok}</p>}
+      {mail.err && <p className="mt-2 text-xs text-neg">{mail.err}</p>}
     </div>
   );
 }
@@ -51,18 +65,22 @@ export function MemberLoginModal({ open, member, onClose, onDone }: { open: bool
   const [username, setUsername] = useState('');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState(tempPassword());
-  const [done, setDone] = useState<{ username: string; password: string } | null>(null);
+  const [done, setDone] = useState<{ username: string; password: string; email: string | null } | null>(null);
 
   useEffect(() => {
     if (open) { setUsername(member?.username ?? ''); setEmail(member?.email && !/@members\.najdi-fund\.app$/.test(member.email) ? member.email : ''); setPassword(tempPassword()); setDone(null); }
-  }, [open, member]);
+  }, [open, member?.id]);
 
   const u = username.trim().toLowerCase();
   const submit = async () => {
     const r = has
       ? await a.run(() => rpc('admin_reset_password', { p_member: member.id, p_password: password }).then(() => member.username ?? '—'), 'تم تعيين كلمة مرور مؤقتة جديدة')
       : await a.run(() => rpc<string>('admin_create_member_login', { p_member: member.id, p_username: u, p_password: password, p_email: email.trim() || null }), 'تم إنشاء حساب الدخول');
-    if (r) { setDone({ username: String(r), password }); onDone(); }
+    if (r) {
+      const personal = member?.email && !/@members\.najdi-fund\.app$/.test(member.email) ? member.email : null;
+      setDone({ username: String(r), password, email: has ? personal : (email.trim() || personal) });
+      onDone();
+    }
   };
 
   return (
@@ -70,7 +88,7 @@ export function MemberLoginModal({ open, member, onClose, onDone }: { open: bool
       footer={done ? <Button variant="secondary" onClick={onClose}>تم</Button> : <>
         <Button onClick={submit} loading={a.busy} icon={<KeyRound className="size-4" />} disabled={!has && !USERNAME_RE.test(u) || password.length < 8}>{has ? 'تعيين كلمة مؤقتة' : 'إنشاء الدخول'}</Button>
         <Button variant="secondary" onClick={onClose}>إلغاء</Button></>}>
-      {done ? <CredentialsCard name={member.full_name} username={done.username} password={done.password} /> : <>
+      {done ? <CredentialsCard name={member.full_name} username={done.username} password={done.password} memberId={member.id} email={done.email} /> : <>
         {has
           ? <Notice>اسم المستخدم الحالي: <span dir="ltr" className="num font-semibold">{member.username ?? '—'}</span>. ستُعيَّن كلمة مرور مؤقتة ويُطلب من العضو تغييرها عند الدخول.</Notice>
           : <>

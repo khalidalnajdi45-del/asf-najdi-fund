@@ -104,7 +104,7 @@ export function AppShell({ role, children }: { role: 'manager' | 'member'; child
           <div className="text-[11px] text-brand-200"><span className="text-gold-300">ASF</span> · {role === 'manager' ? 'بوابة مدير الصندوق' : 'بوابة العضو'}</div>
         </div>
       </a>
-      <div className="flex-1 space-y-0.5 overflow-y-auto px-3 pb-4 scroll-thin">
+      <div className="no-scrollbar flex-1 space-y-0.5 overflow-y-auto overscroll-contain px-3 pb-4">
         {nav.map(item => {
           const header = item.group && item.group !== lastGroup ? item.group : null;
           lastGroup = item.group;
@@ -135,7 +135,7 @@ export function AppShell({ role, children }: { role: 'manager' | 'member'; child
   );
 
   return (
-    <div className="min-h-screen lg:pr-64">
+    <div className="min-h-screen lg:h-dvh lg:overflow-hidden lg:pr-64">
       <aside className="shurfa no-print fixed inset-y-0 right-0 z-30 hidden w-64 bg-brand-900 lg:block">{sidebar}</aside>
       {open && (
         <div className="no-print fixed inset-0 z-40 lg:hidden">
@@ -146,6 +146,7 @@ export function AppShell({ role, children }: { role: 'manager' | 'member'; child
           </aside>
         </div>
       )}
+      <div id="app-scroll" className="app-scroll lg:h-dvh lg:overflow-y-auto">
       <header className="no-print sticky top-0 z-20 flex h-14 items-center justify-between border-b border-line bg-canvas/90 px-4 backdrop-blur lg:hidden">
         <button onClick={() => setOpen(true)} aria-label="القائمة" className="rounded-md p-1.5 hover:bg-white"><Menu className="size-5" /></button>
         <span className="flex items-center gap-2 text-sm font-semibold"><img src="/brand/mark-plum.svg" alt="" className="h-6 w-7" />{fund?.fund_name}</span>
@@ -160,6 +161,7 @@ export function AppShell({ role, children }: { role: 'manager' | 'member'; child
         </div>
       )}
       <main className="mx-auto max-w-[1280px] px-4 py-6 sm:px-6 lg:px-8 lg:py-8">{children}</main>
+      </div>
       <WelcomeSplash />
     </div>
   );
