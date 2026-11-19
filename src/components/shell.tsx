@@ -54,6 +54,30 @@ export const memberNav: NavItem[] = [
   { href: '/member/profile/', label: 'ملفي الشخصي', icon: <User className={ic} /> },
 ];
 
+/** Mobile bottom bar: the most used pages one tap away; «المزيد» opens the full menu. */
+const MEMBER_TABS = ['/member/', '/member/contributions/', '/member/loans/', '/member/deposits/'];
+const MANAGER_TABS = ['/admin/', '/admin/members/', '/admin/contributions/', '/admin/loans/'];
+const SHORT: Record<string, string> = { '/admin/': 'الرئيسية', '/admin/contributions/': 'الاشتراكات', '/admin/loans/': 'القروض', '/member/contributions/': 'اشتراكاتي' };
+
+function BottomBar({ items, active, onMore, moreActive }: { items: NavItem[]; active: (h: string) => boolean; onMore: () => void; moreActive: boolean }) {
+  const tab = (on: boolean) => clsx('relative flex flex-1 flex-col items-center justify-center gap-1 pt-2 pb-1.5 text-[10.5px] transition-colors', on ? 'font-semibold text-brand-700' : 'text-muted');
+  const dot = <span className="absolute top-0 h-[3px] w-8 rounded-b-full bg-gold-500" />;
+  return (
+    <nav className="no-print fixed inset-x-0 bottom-0 z-30 border-t border-line bg-surface/95 backdrop-blur lg:hidden"
+      style={{ paddingBottom: 'env(safe-area-inset-bottom, 0px)' }}>
+      <div className="mx-auto flex max-w-lg">
+        {items.map(i => {
+          const on = active(i.href);
+          return <a key={i.href} href={i.href} className={tab(on)}>{on && dot}
+            <span className={clsx('flex size-8 items-center justify-center rounded-xl transition-colors', on && 'bg-brand-50')}>{i.icon}</span>{SHORT[i.href] ?? i.label}</a>;
+        })}
+        <button onClick={onMore} className={tab(moreActive)}>{moreActive && dot}
+          <span className={clsx('flex size-8 items-center justify-center rounded-xl', moreActive && 'bg-brand-50')}><Menu className="size-[18px]" /></span>المزيد</button>
+      </div>
+    </nav>
+  );
+}
+
 function useUnread(userId?: string) {
   const [n, setN] = useState(0);
   useEffect(() => {
@@ -79,7 +103,7 @@ export function AppShell({ role, children }: { role: 'manager' | 'member'; child
   const unread = useUnread(profile?.id);
   const nav = role === 'manager' ? managerNav : memberNav;
 
-  useEffect(() => { const f = () => setPath(currentPath()); f(); window.addEventListener('hashchange', f); return () => window.removeEventListener('hashchange', f); }, []);
+  useEffect(() => { const f = () => { setPath(currentPath()); setOpen(false); }; f(); window.addEventListener('hashchange', f); return () => window.removeEventListener('hashchange', f); }, []);
   useEffect(() => {
     if (!ready) return;
     if (!session || mfaRequired) { go('/login/', true); return; }
@@ -162,8 +186,10 @@ export function AppShell({ role, children }: { role: 'manager' | 'member'; child
           بيانات تجريبية — جميع الأسماء والمبالغ في هذه النسخة للعرض والاختبار فقط
         </div>
       )}
-      <main className="mx-auto max-w-[1280px] px-4 py-6 sm:px-6 lg:px-8 lg:py-8">{children}</main>
+      <main className="mx-auto max-w-[1280px] px-4 pb-28 pt-6 sm:px-6 lg:px-8 lg:py-8">{children}</main>
       </div>
+      <BottomBar items={(role === 'manager' ? MANAGER_TABS : MEMBER_TABS).map(h => nav.find(n => n.href === h)!).filter(Boolean)}
+        active={active} onMore={() => setOpen(true)} moreActive={!(role === 'manager' ? MANAGER_TABS : MEMBER_TABS).some(h => active(h))} />
       <WelcomeSplash />
     </div>
   );
