@@ -6,6 +6,7 @@ import { supabase, cleanError, IS_DEMO } from '@/lib/supabase';
 import { resetDemo } from '@/lib/demo/client';
 import { useAuth } from '@/lib/auth';
 import { Button, ErrorBox, Field, Input } from '@/components/ui';
+import { BootScreen } from '@/components/welcome';
 
 export default function LoginPage() {
   const { ready, session, profile, mfaRequired, refresh } = useAuth();
@@ -18,6 +19,8 @@ export default function LoginPage() {
   useEffect(() => {
     if (ready && session && profile && !mfaRequired) go(profile.role === 'manager' ? '/admin/' : '/member/', true);
   }, [ready, session, profile, mfaRequired]);
+
+  const restoring = !ready || (!!session && !!profile && !mfaRequired);
 
   async function signIn(e: React.FormEvent) {
     e.preventDefault();
@@ -47,6 +50,7 @@ export default function LoginPage() {
     } finally { setBusy(false); }
   }
 
+  if (restoring && !busy) return <BootScreen />;
   return (
     <div className="grid min-h-screen lg:grid-cols-[1fr_480px]">
       <div className="shurfa relative hidden overflow-hidden bg-brand-900 lg:block">

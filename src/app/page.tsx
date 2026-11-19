@@ -1,4 +1,5 @@
 'use client';
+import { BootScreen } from '@/components/welcome';
 import { go } from '@/lib/nav';
 import { useEffect } from 'react';
 import { useAuth } from '@/lib/auth';
@@ -11,5 +12,5 @@ export default function Home() {
     if (!session || mfaRequired || !profile) go('/login/', true);
     else go(profile.role === 'manager' ? '/admin/' : '/member/', true);
   }, [ready, session, profile, mfaRequired]);
-  return <Loading />;
+  return <BootScreen />;
 }

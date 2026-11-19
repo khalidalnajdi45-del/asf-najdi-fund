@@ -59,12 +59,12 @@ export function WelcomeSplash() {
   }, []);
   useEffect(() => {
     if (!show) return;
-    const t = setTimeout(() => setLeaving(true), 2600);
+    const t = setTimeout(() => setLeaving(true), 5600);
     return () => clearTimeout(t);
   }, [show]);
   useEffect(() => {
     if (!leaving) return;
-    const t = setTimeout(() => setShow(false), 500);
+    const t = setTimeout(() => setShow(false), 700);
     return () => clearTimeout(t);
   }, [leaving]);
 
@@ -80,6 +80,7 @@ export function WelcomeSplash() {
       <div className="relative mt-6 h-8 sm:h-9">
         <div key={key} className="asf-phrase text-lg text-white/90 sm:text-xl">{phrase}</div>
       </div>
+      <div className="asf-hint absolute bottom-8 text-xs text-brand-200">اضغط للمتابعة</div>
     </div>
   );
 }
@@ -100,5 +101,14 @@ export function GreetingBand({ subtitle }: { subtitle?: React.ReactNode }) {
         {subtitle && <div className="mt-3 text-xs text-brand-200">{subtitle}</div>}
       </div>
     </section>
+  );
+}
+
+/** Brand boot screen shown while a saved session is being restored — so a signed-in user never sees the login form. */
+export function BootScreen() {
+  return (
+    <div className="shurfa fixed inset-0 z-[90] flex items-center justify-center bg-brand-900">
+      <img src="/brand/mark-gold.svg" alt="" className="h-20 w-24 animate-pulse opacity-90" />
+    </div>
   );
 }
