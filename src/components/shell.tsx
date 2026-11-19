@@ -7,6 +7,8 @@ import {
   PiggyBank, Receipt, ScrollText, Settings, ShieldCheck, TrendingUp, Coins, User, Users, Wallet, X, FileClock, PartyPopper, Mail, Send,
 } from 'lucide-react';
 import { useAuth } from '@/lib/auth';
+import { ForcePasswordChange } from './force-password';
+import { loginName } from '@/lib/format';
 import { supabase } from '@/lib/supabase';
 import { Loading } from './ui';
 import { WelcomeSplash } from './welcome';
@@ -87,6 +89,8 @@ export function AppShell({ role, children }: { role: 'manager' | 'member'; child
     return <div className="flex min-h-screen items-center justify-center p-6 text-center text-muted">الحساب غير نشط. يرجى التواصل مع مدير الصندوق. <button className="mr-2 text-brand-600 underline" onClick={signOut}>خروج</button></div>;
   }
 
+  if ((session.user as any)?.user_metadata?.must_change_password) return <ForcePasswordChange />;
+
   const active = (href: string) => (href === '/admin/' || href === '/member/') ? path === href || path === href.slice(0, -1) : path.startsWith(href.slice(0, -1));
   const notifHref = role === 'manager' ? '/admin/notifications/' : '/member/notifications/';
   let lastGroup: string | undefined;
@@ -120,7 +124,7 @@ export function AppShell({ role, children }: { role: 'manager' | 'member'; child
       <div className="border-t border-white/10 p-3">
         <div className="mb-2 px-2 text-xs text-brand-200">
           <div className="truncate font-medium text-white">{profile.full_name}</div>
-          <div className="truncate" dir="ltr">{profile.email}</div>
+          <div className="truncate" dir="ltr">{loginName(profile.email)}</div>
         </div>
         <button onClick={async () => { await signOut(); go('/login/', true); }}
           className="flex w-full items-center gap-2 rounded-lg px-3 py-2 text-[13px] text-brand-100 hover:bg-white/5 hover:text-white">

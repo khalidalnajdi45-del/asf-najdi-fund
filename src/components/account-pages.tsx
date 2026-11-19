@@ -1,4 +1,5 @@
 'use client';
+import { isLoginAlias, loginName } from '@/lib/format';
 import { go } from '@/lib/nav';
 import { useEffect, useState } from 'react';
 import { CheckCheck, Megaphone, ShieldCheck } from 'lucide-react';
@@ -95,7 +96,7 @@ export function ProfilePage() {
       <div className="grid gap-4 lg:grid-cols-2">
         <Card title="البيانات الأساسية">
           <div className="space-y-3">
-            <KV items={[['البريد الإلكتروني (اسم الدخول)', <span className="num">{profile?.email}</span>], ['نوع الحساب', profile?.role === 'manager' ? 'مدير الصندوق' : 'عضو'],
+            <KV items={[[isLoginAlias(profile?.email) ? 'اسم المستخدم' : 'البريد الإلكتروني (اسم الدخول)', <span className="num" dir="ltr">{loginName(profile?.email)}</span>], ['نوع الحساب', profile?.role === 'manager' ? 'مدير الصندوق' : 'عضو'],
               ...(member.data ? [['رقم العضو', <span className="num">{member.data.member_no}</span>] as [string, any]] : [])]} />
             <Field label="الاسم الكامل"><Input value={f.name} onChange={e => setF({ ...f, name: e.target.value })} /></Field>
             {memberId && <Field label="رقم الجوال"><Input dir="ltr" value={f.phone} onChange={e => setF({ ...f, phone: e.target.value })} /></Field>}

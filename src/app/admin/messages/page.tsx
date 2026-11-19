@@ -4,7 +4,7 @@ import clsx from 'clsx';
 import { Bell, CheckSquare, Mail, RotateCcw, Send, Square } from 'lucide-react';
 import { rpc, supabase } from '@/lib/supabase';
 import { q, useData } from '@/lib/hooks';
-import { dateTime, num, sar } from '@/lib/format';
+import { dateTime, num, sar, isLoginAlias } from '@/lib/format';
 import { buildMessageEmail, MERGE_FIELDS, mergeText } from '@/lib/report-email';
 import { EMAIL_BANNER_DATA_URI } from '@/lib/email-banner';
 import { mailSummary, sendMemberMessage } from '@/lib/report-mail';
@@ -60,8 +60,8 @@ function Composer({ onSent }: { onSent: () => void }) {
   const bodyRef = useRef<HTMLTextAreaElement>(null);
 
   const bmap = useMemo(() => new Map((bals.data ?? []).map(b => [b.member_id, b])), [bals.data]);
-  const umap = useMemo(() => new Map((users.data ?? []).map(u => [u.id, u.email])), [users.data]);
-  const list = (members.data ?? []).map(m => ({ ...m, mail: m.email || (m.user_id ? umap.get(m.user_id) : null) || null, b: bmap.get(m.id) }));
+  const umap = useMemo(() => new Map((users.data ?? []).filter(u => !isLoginAlias(u.email)).map(u => [u.id, u.email])), [users.data]);
+  const list = (members.data ?? []).map(m => ({ ...m, mail: (isLoginAlias(m.email) ? null : m.email) || (m.user_id ? umap.get(m.user_id) : null) || null, b: bmap.get(m.id) }));
   const inAud = (m: typeof list[number]) =>
     aud === 'all' ? true : aud === 'arrears' ? num(m.b?.contributions_overdue) > 0 : aud === 'loans' ? num(m.b?.loan_outstanding) > 0 : picked.has(m.id);
   const recipients = list.filter(inAud);

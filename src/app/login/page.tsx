@@ -22,9 +22,11 @@ export default function LoginPage() {
   async function signIn(e: React.FormEvent) {
     e.preventDefault();
     setBusy(true); setError(null);
-    const { error } = await supabase().auth.signInWithPassword({ email: email.trim().toLowerCase(), password });
+    const id = email.trim().toLowerCase();
+    const login = id.includes('@') ? id : `${id}@members.najdi-fund.app`;
+    const { error } = await supabase().auth.signInWithPassword({ email: login, password });
     setBusy(false);
-    if (error) setError(/invalid/i.test(error.message) ? 'البريد الإلكتروني أو كلمة المرور غير صحيحة' : cleanError(error.message));
+    if (error) setError(/invalid/i.test(error.message) ? 'اسم المستخدم أو كلمة المرور غير صحيحة' : cleanError(error.message));
   }
 
   async function verifyMfa(e: React.FormEvent) {
@@ -79,8 +81,8 @@ export default function LoginPage() {
                 <h2 className="text-2xl font-semibold">تسجيل الدخول</h2>
                 <p className="mt-1 text-sm text-muted">ادخل بياناتك للوصول إلى حسابك في الصندوق</p>
               </div>
-              <Field label="البريد الإلكتروني">
-                <Input type="email" dir="ltr" autoComplete="username" required value={email} onChange={e => setEmail(e.target.value)} />
+              <Field label="اسم المستخدم">
+                <Input type="text" dir="ltr" autoComplete="username" autoCapitalize="none" autoCorrect="off" spellCheck={false} required value={email} onChange={e => setEmail(e.target.value)} placeholder="khalid" />
               </Field>
               <Field label="كلمة المرور">
                 <Input type="password" dir="ltr" autoComplete="current-password" required value={password} onChange={e => setPassword(e.target.value)} />

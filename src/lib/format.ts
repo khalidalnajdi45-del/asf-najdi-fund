@@ -63,3 +63,8 @@ export function lastOfMonth(offsetMonths = 0) {
   const d = new Date(Date.UTC(y, m + offsetMonths, 0));
   return d.toISOString().slice(0, 10);
 }
+
+/** Members log in with a username backed by a synthetic auth address — show the username, never that address. */
+export const LOGIN_DOMAIN = 'members.najdi-fund.app';
+export const isLoginAlias = (e?: string | null) => !!e && e.toLowerCase().endsWith('@' + LOGIN_DOMAIN);
+export const loginName = (e?: string | null) => (isLoginAlias(e) ? e!.split('@')[0] : e ?? '');

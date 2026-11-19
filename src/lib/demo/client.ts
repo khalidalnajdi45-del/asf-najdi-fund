@@ -150,20 +150,27 @@ const auth = {
   async signInWithPassword({ email, password }: { email: string; password: string }) {
     try {
       const d = await db();
-      const r = await d.query(`select id, email from auth.users where lower(email) = lower($1) and encrypted_password = extensions.crypt($2, encrypted_password)`, [email, password]);
+      const r = await d.query(`select id, email, raw_user_meta_data as meta from auth.users where lower(email) = lower($1) and encrypted_password = extensions.crypt($2, encrypted_password)`, [email, password]);
       if (!r.rows.length) return { data: null, error: { message: 'Invalid login credentials' } };
-      const s: Session = { user: { id: r.rows[0].id, email: r.rows[0].email }, access_token: 'demo' };
+      const row: any = r.rows[0];
+      const s: Session = { user: { id: row.id, email: row.email, user_metadata: row.meta ?? {} }, access_token: 'demo' } as any;
       writeSession(s);
       listeners.forEach(l => l('SIGNED_IN', s));
       return { data: { session: s }, error: null };
     } catch (e) { return { data: null, error: err(e) }; }
   },
   async signOut() { writeSession(null); listeners.forEach(l => l('SIGNED_OUT', null)); return { error: null }; },
-  async updateUser({ password }: { password?: string }) {
-    const s = readSession();
-    if (s && password) {
+  async updateUser({ password, data }: { password?: string; data?: Record<string, unknown> }) {
+    const s = readSession() as any;
+    if (s) {
       const d = await db();
-      await d.query(`update auth.users set encrypted_password = extensions.crypt($2, extensions.gen_salt('bf')) where id = $1`, [s.user.id, password]);
+      if (password) await d.query(`update auth.users set encrypted_password = extensions.crypt($2, extensions.gen_salt('bf')) where id = $1`, [s.user.id, password]);
+      if (data) {
+        await d.query(`update auth.users set raw_user_meta_data = coalesce(raw_user_meta_data, '{}'::jsonb) || $2::jsonb where id = $1`, [s.user.id, JSON.stringify(data)]);
+        s.user.user_metadata = { ...(s.user.user_metadata ?? {}), ...data };
+        writeSession(s);
+        listeners.forEach(l => l('USER_UPDATED', s));
+      }
     }
     return { data: { user: s?.user }, error: null };
   },

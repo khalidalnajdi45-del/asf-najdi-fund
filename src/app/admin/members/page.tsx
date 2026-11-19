@@ -7,26 +7,28 @@ import { q, useData } from '@/lib/hooks';
 import { useAction } from '@/lib/action';
 import { date, sar, today } from '@/lib/format';
 import { exportXlsx, n2 } from '@/lib/export';
-import { Badge, Button, Card, DataTable, ErrorBox, Field, Input, Modal, Notice, PageHeader, Textarea } from '@/components/ui';
+import { Badge, Button, Card, DataTable, ErrorBox, Field, Input, Modal, PageHeader, Textarea } from '@/components/ui';
+import { CredentialsCard, tempPassword as genPassword, USERNAME_RE } from '@/components/member-login';
 
-const genPassword = () => {
-  const c = 'ABCDEFGHJKLMNPQRSTUVWXYZabcdefghijkmnopqrstuvwxyz23456789';
-  const a = new Uint32Array(10); crypto.getRandomValues(a);
-  return Array.from(a, x => c[x % c.length]).join('') + '#7';
-};
 
 export default function MembersPage() {
-  const { data, loading, error, reload } = useData<any[]>(() => q(supabase().from('v_member_balances').select('*').order('member_no')));
+  const { data, loading, error, reload } = useData<any[]>(async () => {
+    const [bal, mem] = await Promise.all([q(supabase().from('v_member_balances').select('*').order('member_no')), q(supabase().from('members').select('id, username'))]);
+    const u = new Map((mem as any[]).map(m => [m.id, m.username]));
+    return (bal as any[]).map(b => ({ ...b, username: u.get(b.member_id) ?? null }));
+  });
   const [open, setOpen] = useState(false);
-  const [created, setCreated] = useState<{ email: string; password: string } | null>(null);
+  const [created, setCreated] = useState<{ name: string; username: string; password: string } | null>(null);
   const a = useAction();
-  const [f, setF] = useState({ name: '', email: '', phone: '', join: today(), password: genPassword(), notes: '' });
+  const blank = () => ({ name: '', username: '', email: '', phone: '', join: today(), password: genPassword(), notes: '' });
+  const [f, setF] = useState(blank());
 
   const submit = async () => {
-    const r = await a.run(() => rpc('admin_create_member', {
-      p_full_name: f.name, p_email: f.email, p_password: f.password, p_phone: f.phone || null, p_join_date: f.join, p_notes: f.notes || null,
+    const r = await a.run(() => rpc('admin_create_member_v2', {
+      p_full_name: f.name, p_username: f.username.trim().toLowerCase(), p_password: f.password, p_email: f.email.trim() || null,
+      p_phone: f.phone || null, p_join_date: f.join, p_notes: f.notes || null,
     }), 'تم إنشاء حساب العضو');
-    if (r) { setCreated({ email: f.email.trim().toLowerCase(), password: f.password }); setOpen(false); reload(); setF({ name: '', email: '', phone: '', join: today(), password: genPassword(), notes: '' }); }
+    if (r) { setCreated({ name: f.name.trim(), username: f.username.trim().toLowerCase(), password: f.password }); setOpen(false); reload(); setF(blank()); }
   };
 
   const exportList = () => exportXlsx('الأعضاء', [{
@@ -43,13 +45,7 @@ export default function MembersPage() {
           <Button variant="secondary" icon={<Download className="size-4" />} onClick={exportList}>Excel</Button>
           <Button icon={<UserPlus className="size-4" />} onClick={() => setOpen(true)}>عضو جديد</Button>
         </>} />
-      {created && (
-        <div className="mb-4"><Notice>
-          تم إنشاء الحساب. بيانات الدخول (تظهر مرة واحدة — أرسلها للعضو بطريقة آمنة):
-          <span className="mx-2 num font-semibold">{created.email}</span> / <span className="mx-2 num font-semibold">{created.password}</span>
-          <button className="mr-3 text-xs underline" onClick={() => setCreated(null)}>إخفاء</button>
-        </Notice></div>
-      )}
+      {created && <div className="mb-4"><CredentialsCard {...created} onClose={() => setCreated(null)} /></div>}
       <ErrorBox>{error}</ErrorBox>
       <Card pad={false}>
         <DataTable rows={data} loading={loading} searchable={r => `${r.full_name} ${r.member_no}`}
@@ -58,6 +54,7 @@ export default function MembersPage() {
             { key: 'member_no', header: 'رقم العضو', render: r => <span className="num text-xs text-muted">{r.member_no}</span> },
             { key: 'full_name', header: 'الاسم', render: r => <span className="font-medium">{r.full_name}</span> },
             { key: 'status', header: 'الحالة', render: r => <Badge status={r.status} /> },
+            { key: 'username', header: 'الدخول', render: r => r.username ? <span dir="ltr" className="num text-xs">{r.username}</span> : <span className="text-xs text-muted">بدون حساب</span> },
             { key: 'join_date', header: 'الانضمام', render: r => date(r.join_date) },
             { key: 'contributions_total', header: 'الاشتراكات', align: 'end', render: r => sar(r.contributions_total) },
             { key: 'contributions_overdue', header: 'متأخرات', align: 'end', render: r => Number(r.contributions_overdue) > 0 ? <span className="text-neg">{sar(r.contributions_overdue)}</span> : '—' },
@@ -67,11 +64,12 @@ export default function MembersPage() {
       </Card>
 
       <Modal open={open} onClose={() => setOpen(false)} title="إضافة عضو جديد"
-        footer={<><Button onClick={submit} loading={a.busy} disabled={f.name.trim().length < 2 || !f.email.includes('@') || f.password.length < 8}>إنشاء الحساب</Button>
+        footer={<><Button onClick={submit} loading={a.busy} disabled={f.name.trim().length < 2 || !USERNAME_RE.test(f.username.trim().toLowerCase()) || f.password.length < 8}>إنشاء الحساب</Button>
           <Button variant="secondary" onClick={() => setOpen(false)}>إلغاء</Button></>}>
         <Field label="الاسم الكامل"><Input value={f.name} onChange={e => setF({ ...f, name: e.target.value })} /></Field>
         <div className="grid grid-cols-2 gap-3">
-          <Field label="البريد الإلكتروني (اسم الدخول)"><Input type="email" dir="ltr" value={f.email} onChange={e => setF({ ...f, email: e.target.value })} /></Field>
+          <Field label="اسم المستخدم (للدخول)" hint="حروف إنجليزية صغيرة/أرقام — مثال: khalid"><Input dir="ltr" autoCapitalize="none" value={f.username} onChange={e => setF({ ...f, username: e.target.value.toLowerCase().replace(/\s/g, '') })} /></Field>
+          <Field label="البريد الشخصي (للتقارير — اختياري)"><Input type="email" dir="ltr" value={f.email} onChange={e => setF({ ...f, email: e.target.value })} /></Field>
           <Field label="الجوال"><Input dir="ltr" value={f.phone} onChange={e => setF({ ...f, phone: e.target.value })} placeholder="05xxxxxxxx" /></Field>
           <Field label="تاريخ الانضمام" hint="تُنشأ الاشتراكات المستحقة من شهر الانضمام"><Input type="date" value={f.join} onChange={e => setF({ ...f, join: e.target.value })} /></Field>
           <Field label="كلمة مرور مؤقتة"><div className="flex gap-1"><Input dir="ltr" value={f.password} onChange={e => setF({ ...f, password: e.target.value })} />

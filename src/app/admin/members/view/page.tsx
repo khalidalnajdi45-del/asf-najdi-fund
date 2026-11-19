@@ -9,6 +9,7 @@ import { date, sar } from '@/lib/format';
 import { Badge, Button, Card, ErrorBox, Field, Input, KV, Loading, Modal, PageHeader, Select, Stat, Tabs, Textarea } from '@/components/ui';
 import { ContributionModal, DepositModal, ReverseModal } from '@/components/ops';
 import { ContributionsTable, DepositLedger, LoansTable, TransactionsTable } from '@/components/member-views';
+import { MemberLoginModal } from '@/components/member-login';
 
 export default function MemberDetails() {
   const id = useParam('id');
@@ -42,10 +43,10 @@ export default function MemberDetails() {
     <>
       <PageHeader back={{ href: '/admin/members/', label: 'الأعضاء' }}
         title={<span className="flex items-center gap-3">{m.full_name} <Badge status={m.status} /></span>}
-        subtitle={<span className="num">{m.member_no} · {m.email}</span>}
+        subtitle={<span className="num">{m.member_no}{m.username ? <> · <span dir="ltr">@{m.username}</span></> : ''}</span>}
         actions={<>
           <Button variant="secondary" icon={<Pencil className="size-4" />} onClick={() => setEdit(true)}>تعديل</Button>
-          <Button variant="secondary" icon={<KeyRound className="size-4" />} onClick={() => setPwd(true)}>كلمة المرور</Button>
+          <Button variant="secondary" icon={<KeyRound className="size-4" />} onClick={() => setPwd(true)}>{m.user_id ? 'كلمة المرور' : 'إنشاء دخول'}</Button>
           <Button variant="secondary" icon={<FileText className="size-4" />} onClick={() => (go(`/admin/statement/?member=${id}`))}>كشف حساب</Button>
           <Button variant="secondary" icon={<PiggyBank className="size-4" />} onClick={() => setDep(true)} disabled={m.status !== 'active'}>إيداع</Button>
           <Button icon={<CalendarPlus className="size-4" />} onClick={() => setPay({})}>تسجيل اشتراك</Button>
@@ -60,7 +61,10 @@ export default function MemberDetails() {
       </div>
 
       <Card className="mt-4" title="بيانات العضو">
-        <KV items={[['الجوال', <span className="num">{m.phone ?? '—'}</span>], ['تاريخ الانضمام', date(m.join_date)], ['البريد', <span className="num">{m.email}</span>], ['ملاحظات', m.notes]]} />
+        <KV items={[
+          ['اسم المستخدم', m.username ? <span dir="ltr" className="num font-medium">{m.username}</span> : <button className="text-brand-600 underline" onClick={() => setPwd(true)}>لا يوجد — إنشاء دخول</button>],
+          ['البريد الشخصي', <span className="num">{m.email && !/@members\.najdi-fund\.app$/.test(m.email) ? m.email : '—'}</span>],
+          ['الجوال', <span className="num">{m.phone ?? '—'}</span>], ['تاريخ الانضمام', date(m.join_date)], ['ملاحظات', m.notes]]} />
       </Card>
 
       <div className="mt-6">
@@ -81,16 +85,21 @@ export default function MemberDetails() {
       <DepositModal open={dep} onClose={() => setDep(false)} onDone={d.reload} memberId={id} />
       <ReverseModal tx={rev} onClose={() => setRev(null)} onDone={d.reload} />
       <EditMember open={edit} member={m} onClose={() => setEdit(false)} onDone={d.reload} />
-      <ResetPassword open={pwd} memberId={id} onClose={() => setPwd(false)} />
+      <MemberLoginModal open={pwd} member={m} onClose={() => setPwd(false)} onDone={d.reload} />
     </>
   );
 }
 
 function EditMember({ open, member, onClose, onDone }: { open: boolean; member: any; onClose: () => void; onDone: () => void }) {
   const a = useAction();
-  const [f, setF] = useState({ name: member.full_name, phone: member.phone ?? '', notes: member.notes ?? '', status: member.status });
+  const personal = member.email && !/@members\.najdi-fund\.app$/.test(member.email) ? member.email : '';
+  const [f, setF] = useState({ name: member.full_name, phone: member.phone ?? '', notes: member.notes ?? '', status: member.status, email: personal });
   const save = async () => {
-    const r = await a.run(() => rpc('admin_update_member', { p_member: member.id, p_full_name: f.name, p_phone: f.phone, p_notes: f.notes, p_status: f.status }).then(() => true), 'تم حفظ التعديلات');
+    const r = await a.run(async () => {
+      await rpc('admin_update_member', { p_member: member.id, p_full_name: f.name, p_phone: f.phone, p_notes: f.notes, p_status: f.status });
+      if (f.email.trim() !== personal) await rpc('admin_set_member_email', { p_member: member.id, p_email: f.email.trim() || null });
+      return true;
+    }, 'تم حفظ التعديلات');
     if (r) { onDone(); onClose(); }
   };
   return (
@@ -99,26 +108,11 @@ function EditMember({ open, member, onClose, onDone }: { open: boolean; member: 
       <Field label="الاسم الكامل"><Input value={f.name} onChange={e => setF({ ...f, name: e.target.value })} /></Field>
       <div className="grid grid-cols-2 gap-3">
         <Field label="الجوال"><Input dir="ltr" value={f.phone} onChange={e => setF({ ...f, phone: e.target.value })} /></Field>
+        <Field label="البريد الشخصي" hint="تُرسل عليه التقارير الشهرية والرسائل"><Input type="email" dir="ltr" value={f.email} onChange={e => setF({ ...f, email: e.target.value })} /></Field>
         <Field label="الحالة" hint="التعطيل يوقف الدخول وتوليد الاشتراكات الجديدة">
           <Select value={f.status} onChange={e => setF({ ...f, status: e.target.value })} options={[{ value: 'active', label: 'نشط' }, { value: 'inactive', label: 'غير نشط' }]} /></Field>
       </div>
       <Field label="ملاحظات"><Textarea value={f.notes} onChange={e => setF({ ...f, notes: e.target.value })} /></Field>
-      <ErrorBox>{a.error}</ErrorBox>
-    </Modal>
-  );
-}
-
-function ResetPassword({ open, memberId, onClose }: { open: boolean; memberId: string; onClose: () => void }) {
-  const a = useAction();
-  const [p, setP] = useState('');
-  const save = async () => {
-    const r = await a.run(() => rpc('admin_reset_password', { p_member: memberId, p_password: p }).then(() => true), 'تم تعيين كلمة المرور الجديدة');
-    if (r) { setP(''); onClose(); }
-  };
-  return (
-    <Modal open={open} onClose={onClose} title="إعادة تعيين كلمة المرور"
-      footer={<><Button onClick={save} loading={a.busy} disabled={p.length < 8}>تعيين</Button><Button variant="secondary" onClick={onClose}>إلغاء</Button></>}>
-      <Field label="كلمة المرور الجديدة" hint="8 أحرف على الأقل — أرسلها للعضو بطريقة آمنة"><Input dir="ltr" value={p} onChange={e => setP(e.target.value)} /></Field>
       <ErrorBox>{a.error}</ErrorBox>
     </Modal>
   );

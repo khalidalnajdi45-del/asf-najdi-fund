@@ -230,6 +230,24 @@ describe('expenses, reversals, immutability', () => {
     expect(n(await s.sysVal(`select account_balance('operating_expenses')`))).toBe(35);
   });
 
+  it('creates username logins and keeps the personal e-mail for mailings', async () => {
+    await s.as(manager);
+    const mid = await s.val(`select admin_create_member_v2('فهد النجدي', 'fahad', 'Asf-1234-Abcd', 'fahad@gmail.com', null, $1::date)`, [today]);
+    const row = await s.sysVal(`select jsonb_build_object('username', m.username, 'email', m.email, 'login', u.email, 'must', (au.raw_user_meta_data->>'must_change_password')::boolean)
+      from members m join app_users u on u.id = m.user_id join auth.users au on au.id = m.user_id where m.id = $1`, [mid]);
+    expect(row).toMatchObject({ username: 'fahad', email: 'fahad@gmail.com', login: 'fahad@members.najdi-fund.app', must: true });
+    expect(await s.sysVal(`select member_email($1)`, [mid])).toBe('fahad@gmail.com');
+    await expectFail(s.q(`select admin_create_member_v2('آخر', 'fahad', 'Asf-1234-Abcd')`), /مستخدم مسبقاً/);
+    await expectFail(s.q(`select admin_create_member_v2('آخر', 'Fa', 'Asf-1234-Abcd')`), /اسم المستخدم/);
+    // existing member without login
+    const old = await s.sysVal(`insert into members(full_name, join_date) values ('نورة', $1::date) returning id`, [today]);
+    expect(await s.val(`select admin_create_member_login($1, 'noura', 'Asf-5555-Wxyz', null)`, [old])).toBe('noura');
+    expect(await s.sysVal(`select member_email($1)`, [old])).toBeNull();
+    await expectFail(s.q(`select admin_create_member_login($1, 'noura2', 'Asf-5555-Wxyz')`, [old]), /حساب دخول مسبقاً/);
+    await s.q(`select admin_set_member_email($1, 'noura@hotmail.com')`, [old]);
+    expect(await s.sysVal(`select member_email($1)`, [old])).toBe('noura@hotmail.com');
+  });
+
   it('records other income into cash and 4900, and reverses it', async () => {
     await s.as(manager);
     const cash0 = n(await s.sysVal(`select account_balance('cash')`));
