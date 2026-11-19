@@ -88,17 +88,20 @@ export async function buildFinancialStatements(year: number, s: Settings, fundNa
   // ---------------------------------------------------------------- 3. changes in members' equity
   const eqRow = (label: string, r: any): Cell[] => [label, A(r, '3000'), surplusOf(r), A(r, '3200'), num(r.total_equity)];
   const mv = (label: string, a: number, b: number, c: number): Cell[] => [label, a, b, c, a + b + c];
-  const adj = (r1: any, r0: any) => (A(r1, '3100') + A(r1, '3900')) - (A(r0, '3100') + A(r0, '3900'));
+  const adj = (r1: any, r0: any) => A(r1, '3900') - A(r0, '3900');
+  const dist = (r1: any, r0: any) => A(r1, '3100') - A(r0, '3100');
   const eqRows: [Cell[], RowStyle][] = [
     [eqRow(`الرصيد في ${date(ppEnd)}`, bsPP), 'subtotal'],
     [mv('اشتراكات الأعضاء خلال السنة', A(bsP, '3000') - A(bsPP, '3000'), 0, 0), undefined],
     [mv('صافي فائض السنة', 0, num(isP.net_surplus), 0), undefined],
     [mv('الدخل الشامل الآخر', 0, 0, num(isP.unrealized_change)), undefined],
+    ...(dist(bsP, bsPP) ? [[mv('أرباح موزعة على الأعضاء', 0, dist(bsP, bsPP), 0), undefined] as [Cell[], RowStyle]] : []),
     ...(adj(bsP, bsPP) ? [[mv('أرصدة افتتاحية وتسويات', 0, adj(bsP, bsPP), 0), undefined] as [Cell[], RowStyle]] : []),
     [eqRow(`الرصيد في ${date(pEnd)}`, bsP), 'total'],
     [mv('اشتراكات الأعضاء خلال السنة', A(bs, '3000') - A(bsP, '3000'), 0, 0), undefined],
     [mv('صافي فائض السنة', 0, num(is.net_surplus), 0), undefined],
     [mv('الدخل الشامل الآخر', 0, 0, num(is.unrealized_change)), undefined],
+    ...(dist(bs, bsP) ? [[mv('أرباح موزعة على الأعضاء', 0, dist(bs, bsP), 0), undefined] as [Cell[], RowStyle]] : []),
     ...(adj(bs, bsP) ? [[mv('أرصدة افتتاحية وتسويات', 0, adj(bs, bsP), 0), undefined] as [Cell[], RowStyle]] : []),
   ];
   const eq: Section = {
@@ -115,7 +118,7 @@ export async function buildFinancialStatements(year: number, s: Settings, fundNa
     { title: 'التدفقات النقدية من الأنشطة الاستثمارية', net: 'صافي النقد من الأنشطة الاستثمارية', items: [
       ['investment_capital', 'مدفوعات لشراء استثمارات'], ['investment_income', 'عوائد استثمار مقبوضة'], ['investment_exit', 'متحصلات التخارج من استثمارات']] },
     { title: 'التدفقات النقدية من الأنشطة التمويلية', net: 'صافي النقد من الأنشطة التمويلية', items: [
-      ['contribution_payment', 'اشتراكات الأعضاء المحصلة'], ['deposit', 'ودائع مستلمة من الأعضاء'], ['withdrawal_payment', 'ودائع مسددة للأعضاء']] },
+      ['contribution_payment', 'اشتراكات الأعضاء المحصلة'], ['deposit', 'ودائع مستلمة من الأعضاء'], ['withdrawal_payment', 'ودائع مسددة للأعضاء'], ['profit_distribution', 'أرباح موزعة نقداً على الأعضاء']] },
   ];
   const cfNet = (r: any, k: string) => num(r.lines.find((l: any) => l.category === k)?.net);
   const known = new Set(GROUPS.flatMap(g => g.items.map(i => i[0])));

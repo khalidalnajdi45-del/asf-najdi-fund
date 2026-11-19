@@ -4,7 +4,7 @@ export const statusLabels: Record<string, [string, Tone]> = {
   // contributions
   paid: ['مسدد', 'green'], partial: ['مسدد جزئياً', 'amber'], unpaid: ['غير مسدد', 'neutral'], overdue: ['متأخر', 'red'], waived: ['معفى', 'neutral'],
   // loans
-  pending: ['قيد المراجعة', 'amber'], approved: ['معتمد', 'blue'], rejected: ['مرفوض', 'red'], disbursed: ['مصروف', 'violet'],
+  pending: ['قيد المراجعة', 'amber'], approved: ['معتمد', 'blue'], rejected: ['مرفوض', 'red'], disbursed: ['قائم', 'violet'],
   active: ['نشط', 'green'], fully_repaid: ['مسدد بالكامل', 'neutral'], cancelled: ['ملغي', 'neutral'],
   // installments
   upcoming: ['قادم', 'neutral'],
@@ -18,7 +18,7 @@ export const txTypeLabels: Record<string, string> = {
   contribution_payment: 'اشتراك شهري', deposit: 'إيداع اختياري', withdrawal_payment: 'صرف سحب وديعة',
   loan_disbursement: 'صرف قرض', loan_repayment: 'سداد قرض', investment_capital: 'ضخ رأس مال استثمار',
   investment_income: 'عائد استثمار', investment_revaluation: 'إعادة تقييم استثمار', investment_exit: 'تخارج من استثمار',
-  expense: 'مصروف', other_income: 'إيراد آخر', manual_journal: 'قيد يدوي', reversal: 'قيد عكسي',
+  expense: 'مصروف', other_income: 'إيراد آخر', profit_distribution: 'توزيع أرباح', manual_journal: 'قيد يدوي', reversal: 'قيد عكسي',
 };
 
 export const frequencyLabels: Record<string, string> = { monthly: 'شهري', quarterly: 'ربع سنوي' };
@@ -38,3 +38,6 @@ export const entityLabels: Record<string, string> = {
   loan_repayments: 'سدادات القروض', investments: 'الاستثمارات', investment_transactions: 'عمليات الاستثمار',
   expenses: 'المصروفات', incomes: 'الإيرادات', documents: 'المستندات', accounts: 'الحسابات', notifications: 'الإشعارات',
 };
+
+/** Loans: "disbursed" (nothing repaid yet) and "active" (repaying) are shown the same — قائم. */
+export const loanStatus = (s?: string | null) => (s === 'active' ? 'disbursed' : s);

@@ -37,8 +37,9 @@ const REPORTS: { key: string; label: string; params: ('period' | 'asOf' | 'year'
 ];
 
 export default function ReportsPage() {
-  const [key, setKey] = useState('fs');
-  const [p, setP] = useState<Params>({ from: `${today().slice(0, 4)}-01-01`, to: today(), asOf: today(), year: Number(today().slice(0, 4)), month: firstOfMonth().slice(0, 7) });
+  const qp = new URLSearchParams(location.hash.split('?')[1] ?? '');
+  const [key, setKey] = useState(qp.get('r') ?? 'fs');
+  const [p, setP] = useState<Params>({ from: `${today().slice(0, 4)}-01-01`, to: today(), asOf: today(), year: Number(qp.get('year') ?? today().slice(0, 4)), month: firstOfMonth().slice(0, 7) });
   const [member, setMember] = useState('');
   const [doc, setDoc] = useState<Doc | null>(null);
   const [busy, setBusy] = useState(false);

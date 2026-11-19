@@ -135,7 +135,12 @@ async function rpc(fn: string, params: Record<string, any> = {}): Promise<Res> {
       if (typeof v === 'object') return JSON.stringify(v);
       return typeof v === 'number' ? String(v) : v;
     });
-    const r = await asUser(async tx => (await tx.query(`select public.${ident(fn)}(${args}) as r`, vals)).rows[0]?.r);
+    // Set-returning functions come back as an array (like PostgREST); everything else as a single value.
+    const r = await asUser(async (tx: any) => {
+      const setof = (await tx.query(`select bool_or(proretset) as s from pg_proc p join pg_namespace n on n.oid = p.pronamespace where n.nspname = 'public' and p.proname = $1`, [fn])).rows[0]?.s;
+      if (setof) return (await tx.query(`select * from public.${ident(fn)}(${args})`, vals)).rows;
+      return (await tx.query(`select public.${ident(fn)}(${args}) as r`, vals)).rows[0]?.r;
+    });
     return { data: r ?? null, error: null };
   } catch (e) { return { data: null, error: err(e) }; }
 }

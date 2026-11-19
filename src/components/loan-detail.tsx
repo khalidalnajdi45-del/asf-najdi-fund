@@ -5,7 +5,7 @@ import { rpc, newKey, supabase } from '@/lib/supabase';
 import { q, useData, useParam } from '@/lib/hooks';
 import { useAction } from '@/lib/action';
 import { date, dateTime, sar, today } from '@/lib/format';
-import { frequencyLabels, statusLabels } from '@/lib/labels';
+import { frequencyLabels, statusLabels, loanStatus } from '@/lib/labels';
 import { PrintBrand } from './report-doc';
 import { exportXlsx, n2, printPdf } from '@/lib/export';
 import { useSettings } from '@/lib/settings';
@@ -50,7 +50,7 @@ export function LoanDetail({ admin }: { admin: boolean }) {
   return (
     <>
       <PageHeader back={admin ? { href: '/admin/loans/', label: 'القروض' } : { href: '/member/loans/', label: 'قروضي' }}
-        title={<span className="flex items-center gap-3">قرض {l.loan_no} <Badge status={l.status} /></span>}
+        title={<span className="flex items-center gap-3">قرض {l.loan_no} <Badge status={loanStatus(l.status)} /></span>}
         subtitle={admin ? <a className="hover:text-brand-600" href={`/admin/members/view/?id=${l.member_id}`}>{l.member_name}</a> : l.purpose}
         actions={<>
           {l.disbursement_tx_id && <Button variant="secondary" icon={<Download className="size-4" />} onClick={exportStatement}>Excel</Button>}

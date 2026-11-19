@@ -1,7 +1,7 @@
 'use client';
 import { go } from '@/lib/nav';
 import { date, dateTime, monthLabel, sar, stripMemberName } from '@/lib/format';
-import { frequencyLabels, txTypeLabels } from '@/lib/labels';
+import { frequencyLabels, txTypeLabels, loanStatus } from '@/lib/labels';
 import { Badge, DataTable, Tag, type Column } from './ui';
 
 export function ContributionsTable({ rows, loading, onPay }: { rows: any[] | null; loading?: boolean; onPay?: (r: any) => void }) {
@@ -54,7 +54,9 @@ export function LoansTable({ rows, loading, hrefBase }: { rows: any[] | null; lo
       { key: 'plan', header: 'السداد', render: r => r.installments_count ? `${r.installments_count} قسط ${frequencyLabels[r.frequency] ?? ''}` : `${r.preferred_months} شهر (مقترح)` },
       { key: 'outstanding', header: 'المتبقي', align: 'end', render: r => Number(r.outstanding) > 0 ? sar(r.outstanding) : '—' },
       { key: 'next_due_date', header: 'القسط القادم', render: r => ['disbursed', 'active', 'overdue'].includes(r.status) ? date(r.next_due_date) : '—' },
-      { key: 'status', header: 'الحالة', render: r => <Badge status={r.status} /> },
+      { key: 'status', header: 'الحالة', render: r => <div className="space-y-1"><Badge status={loanStatus(r.status)} />
+        {['disbursed', 'active', 'overdue'].includes(r.status) && Number(r.total_repayable) > 0 &&
+          <div className="whitespace-nowrap text-[11px] text-muted num">مسدد {sar(r.amount_repaid ?? 0)} من {sar(r.total_repayable)}</div>}</div> },
     ]} />
   );
 }

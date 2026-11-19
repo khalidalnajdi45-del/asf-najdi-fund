@@ -4,7 +4,7 @@ import { useEffect, useState, type ReactNode } from 'react';
 import clsx from 'clsx';
 import {
   ArrowUpFromLine, BarChart3, Bell, BookOpen, CalendarCheck, FileText, HandCoins, LayoutDashboard, LogOut, Menu,
-  PiggyBank, Receipt, ScrollText, Settings, ShieldCheck, TrendingUp, Coins, User, Users, Wallet, X, FileClock, PartyPopper, Mail, Send,
+  PiggyBank, Receipt, ScrollText, Settings, ShieldCheck, TrendingUp, Coins, Gift, Lock, User, Users, Wallet, X, FileClock, PartyPopper, Mail, Send,
 } from 'lucide-react';
 import { useAuth } from '@/lib/auth';
 import { ForcePasswordChange } from './force-password';
@@ -26,9 +26,11 @@ export const managerNav: NavItem[] = [
   { href: '/admin/loans/', label: 'إدارة القروض', icon: <HandCoins className={ic} />, group: 'القروض' },
   { href: '/admin/investments/', label: 'الاستثمارات', icon: <TrendingUp className={ic} />, group: 'المالية' },
   { href: '/admin/incomes/', label: 'الإيرادات', icon: <Coins className={ic} />, group: 'المالية' },
+  { href: '/admin/distributions/', label: 'توزيع الأرباح', icon: <Gift className={ic} />, group: 'المالية' },
   { href: '/admin/expenses/', label: 'المصروفات', icon: <Receipt className={ic} />, group: 'المالية' },
   { href: '/admin/ledger/', label: 'دفتر الأستاذ', icon: <BookOpen className={ic} />, group: 'المالية' },
   { href: '/admin/reports/', label: 'التقارير المالية', icon: <BarChart3 className={ic} />, group: 'المالية' },
+  { href: '/admin/periods/', label: 'الإقفال المالي', icon: <Lock className={ic} />, group: 'المالية' },
   { href: '/admin/messages/', label: 'مراسلة الأعضاء', icon: <Send className={ic} />, group: 'العائلة' },
   { href: '/admin/monthly-reports/', label: 'التقارير الشهرية للأعضاء', icon: <Mail className={ic} />, group: 'العائلة' },
   { href: '/admin/events/', label: 'المناسبات والدعوات', icon: <PartyPopper className={ic} />, group: 'العائلة' },

@@ -4,7 +4,7 @@ import { ArrowLeft, CalendarCheck, HandCoins, PiggyBank, Plus, Wallet } from 'lu
 import { rpc } from '@/lib/supabase';
 import { useData } from '@/lib/hooks';
 import { date, monthLabel, sar } from '@/lib/format';
-import { txTypeLabels } from '@/lib/labels';
+import { txTypeLabels, loanStatus } from '@/lib/labels';
 import { useAuth } from '@/lib/auth';
 import { Badge, Button, Card, DataTable, ErrorBox, Loading, PageHeader, Stat, Tag } from '@/components/ui';
 import { ContributionBars } from '@/components/charts';
@@ -43,7 +43,7 @@ export default function MemberDashboard() {
         <Card title="اشتراكات هذا العام" className="lg:col-span-2"><ContributionBars data={d.year_contributions} /></Card>
         <Card title="القرض الحالي">
           {loan ? <a href={`/member/loans/view/?id=${loan.id}`} className="block space-y-3">
-            <div className="flex items-center justify-between"><span className="num text-sm text-muted">{loan.loan_no}</span><Badge status={loan.status} /></div>
+            <div className="flex items-center justify-between"><span className="num text-sm text-muted">{loan.loan_no}</span><Badge status={loanStatus(loan.status)} /></div>
             <div><div className="text-xs text-muted">المتبقي</div><div className="num text-xl font-semibold">{sar(loan.outstanding)}</div></div>
             <div className="h-2 rounded-full bg-line"><div className="h-2 rounded-full bg-brand-600" style={{ width: `${Math.min(100, (Number(loan.amount_repaid) / Number(loan.total_repayable)) * 100)}%` }} /></div>
             <div className="flex justify-between text-sm"><span className="text-muted">القسط القادم</span><span className="num">{sar(loan.next_due_amount)} · {date(loan.next_due_date)}</span></div>

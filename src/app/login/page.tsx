@@ -100,7 +100,7 @@ export default function LoginPage() {
                   <div className="grid gap-2">
                     <Button type="button" variant="secondary" onClick={() => { setEmail('manager@najdi-fund.demo'); setPassword('Demo@2026!'); }}>مدير الصندوق</Button>
                     <div className="grid grid-cols-2 gap-2">
-                      <Button type="button" variant="secondary" onClick={() => { setEmail('member02@najdi-fund.demo'); setPassword('Member@2026!'); }}>عضو (قرض نشط)</Button>
+                      <Button type="button" variant="secondary" onClick={() => { setEmail('member02@najdi-fund.demo'); setPassword('Member@2026!'); }}>عضو (قرض قائم)</Button>
                       <Button type="button" variant="secondary" onClick={() => { setEmail('member07@najdi-fund.demo'); setPassword('Member@2026!'); }}>عضو (متأخرات)</Button>
                     </div>
                   </div>

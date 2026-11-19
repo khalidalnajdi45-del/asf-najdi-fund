@@ -7,7 +7,7 @@ import { supabase } from '@/lib/supabase';
 import { q, useData } from '@/lib/hooks';
 import { date, sar } from '@/lib/format';
 import { exportXlsx, n2 } from '@/lib/export';
-import { statusLabels } from '@/lib/labels';
+import { statusLabels, loanStatus } from '@/lib/labels';
 import { Badge, Button, Card, DataTable, PageHeader, Stat, Tabs } from '@/components/ui';
 import { RepaymentModal } from '@/components/ops';
 
@@ -56,7 +56,7 @@ export default function LoansManagement() {
             { key: 'outstanding', header: 'المتبقي', align: 'end', render: r => <span className="font-semibold">{sar(r.outstanding)}</span> },
             { key: 'progress', header: 'الأقساط', render: r => <span className="num text-xs">{r.paid_count}/{r.installments_count}</span> },
             { key: 'next_due_date', header: 'القسط القادم', render: r => r.status === 'fully_repaid' ? '—' : date(r.next_due_date) },
-            { key: 'status', header: 'الحالة', render: r => <Badge status={r.status} /> },
+            { key: 'status', header: 'الحالة', render: r => <Badge status={loanStatus(r.status)} /> },
             { key: 'act', header: '', render: r => r.status !== 'fully_repaid' && <Button size="sm" variant="secondary" onClick={e => { e.stopPropagation(); setRepay(r); }}>سداد</Button> },
           ]} />
       </Card>

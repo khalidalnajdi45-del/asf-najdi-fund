@@ -18,7 +18,7 @@ const C = { plum: '#2A1733', plum2: '#4A2A5A', gold: '#B8925A', goldLight: '#D6B
 const MONTHS = ['يناير', 'فبراير', 'مارس', 'أبريل', 'مايو', 'يونيو', 'يوليو', 'أغسطس', 'سبتمبر', 'أكتوبر', 'نوفمبر', 'ديسمبر'];
 const STATUS: Record<string, string> = { paid: 'مسدد', partial: 'مسدد جزئياً', overdue: 'متأخر', unpaid: 'غير مسدد', waived: 'معفى',
   active: 'نشط', disbursed: 'مصروف', overdue_loan: 'متأخر' };
-const TX: Record<string, string> = { contribution_payment: 'اشتراك شهري', deposit: 'إيداع اختياري', withdrawal_payment: 'صرف سحب وديعة',
+const TX: Record<string, string> = { contribution_payment: 'اشتراك شهري', deposit: 'إيداع اختياري', profit_distribution: 'توزيع أرباح', withdrawal_payment: 'صرف سحب وديعة',
   loan_disbursement: 'صرف قرض', loan_repayment: 'سداد قرض', manual_journal: 'قيد يدوي' };
 
 const n = (v: unknown) => (v === null || v === undefined || v === '' ? 0 : Number(v));
@@ -126,8 +126,9 @@ export const MERGE_FIELDS: { key: string; label: string }[] = [
   { key: 'المتأخرات', label: 'مبلغ متأخرات الاشتراك' }, { key: 'أشهر_التأخير', label: 'عدد أشهر التأخير' },
   { key: 'المتبقي_من_القرض', label: 'المتبقي من القروض' }, { key: 'القسط_القادم', label: 'مبلغ القسط القادم' },
   { key: 'تاريخ_القسط', label: 'تاريخ القسط القادم' }, { key: 'الاشتراك_الشهري', label: 'قيمة الاشتراك الشهري' },
+  { key: 'حصة_الأرباح', label: 'حصة آخر توزيع أرباح' }, { key: 'عنوان_التوزيع', label: 'عنوان آخر توزيع' },
 ];
-const MONEY_KEYS = new Set(['المتأخرات', 'المتبقي_من_القرض', 'القسط_القادم', 'الاشتراك_الشهري']);
+const MONEY_KEYS = new Set(['المتأخرات', 'المتبقي_من_القرض', 'القسط_القادم', 'الاشتراك_الشهري', 'حصة_الأرباح']);
 
 /** Replaces {field} placeholders with the member's values (money formatted, dates spelled out, unknown → —). */
 export function mergeText(text: string, fields: Record<string, unknown>) {
