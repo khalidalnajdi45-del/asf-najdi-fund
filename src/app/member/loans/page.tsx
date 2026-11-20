@@ -3,7 +3,7 @@ import clsx from 'clsx';
 import { useState } from 'react';
 import { go } from '@/lib/nav';
 import { CalendarClock, ChevronDown, ChevronLeft, CircleCheck, HandCoins, Plus, TriangleAlert } from 'lucide-react';
-import { supabase } from '@/lib/supabase';
+import { rpc, supabase } from '@/lib/supabase';
 import { q, useData } from '@/lib/hooks';
 import { useAuth } from '@/lib/auth';
 import { date, num, sar, today } from '@/lib/format';
@@ -18,6 +18,7 @@ export default function MyLoans() {
   const { memberId } = useAuth();
   const d = useData<any[]>(() => q(supabase().from('v_loan_summary').select('*').eq('member_id', memberId!).order('created_at', { ascending: false })), [memberId]);
   const [showPast, setShowPast] = useState(false);
+  const chk = useData<any>(() => rpc('loan_auto_check', { p_amount: '0' }));
   if (!d.data) return <Loading />;
   const rows = d.data;
   const live = rows.filter(r => LIVE.includes(r.status));
@@ -54,6 +55,12 @@ export default function MyLoans() {
           </div>
         </div>
       </div>
+
+      {chk.data && <div className="-mt-2 mb-5 flex flex-wrap items-center justify-between gap-3 rounded-xl border border-line bg-surface px-4 py-3 text-sm">
+        <span>صافي رصيدك في الصندوق <b className={`num-cell ${Number(chk.data.net_before) < 0 ? 'text-neg' : 'text-brand-700'}`}>{sar(chk.data.net_before)}</b></span>
+        {chk.data.blocked ? <span className="text-xs text-muted">{chk.data.blocked}</span>
+          : <span className="text-muted">تقدر تطلب حتى <b className="num-cell text-gold-700">{sar(chk.data.max_auto)}</b> ويُعتمد تلقائياً</span>}
+      </div>}
 
       {pending.length > 0 && <div className="mb-5 space-y-3">
         {pending.map(r => (

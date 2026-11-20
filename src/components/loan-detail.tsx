@@ -23,12 +23,13 @@ export function LoanDetail({ admin }: { admin: boolean }) {
   const [rev, setRev] = useState<any>(null);
   const d = useData<any>(async () => {
     if (!id) return null;
-    const [loan, inst, reps] = await Promise.all([
+    const [loan, inst, reps, auto] = await Promise.all([
       q(sb.from('v_loan_summary').select('*').eq('id', id).single()),
       q(sb.from('v_installment_status').select('*').eq('loan_id', id).order('seq')),
       q(sb.from('v_transactions').select('*').eq('loan_id', id).order('tx_date').order('created_at')),
+      q(sb.from('loans').select('auto_approved, auto_check').eq('id', id).maybeSingle()).catch(() => null),
     ]);
-    return { loan, inst, reps };
+    return { loan, inst, reps, auto: auto as any };
   }, [id]);
 
   if (d.error) return <ErrorBox>{d.error}</ErrorBox>;
@@ -78,6 +79,12 @@ export function LoanDetail({ admin }: { admin: boolean }) {
       ) : (
         <Notice>{l.status === 'pending' ? 'الطلب قيد المراجعة من مدير الصندوق.' : l.status === 'approved' ? 'تم اعتماد القرض وهو بانتظار الصرف — لم يُصرف أي مبلغ بعد.' : `حالة الطلب: ${statusLabels[l.status]?.[0]}`}</Notice>
       )}
+      {d.data.auto?.auto_approved && <div className="mt-3"><Notice>✓ اعتُمد تلقائياً — صافي رصيد العضو كان يغطي القرض ({sar(d.data.auto.auto_check?.net_before)}) وسيولة الصندوق كافية.</Notice></div>}
+      {l.status === 'pending' && d.data.auto?.auto_check?.reasons?.length > 0 && <div className="mt-3 rounded-xl border border-gold-300 bg-gold-100/60 p-3 text-sm">
+        <div className="mb-1 font-medium text-gold-700">{admin ? 'لماذا لم يُعتمد تلقائياً؟' : 'طلبك يحتاج موافقة مدير الصندوق لأن:'}</div>
+        <ul className="list-inside list-disc space-y-0.5 text-ink-2">{d.data.auto.auto_check.reasons.map((r: string) => <li key={r}>{r}</li>)}</ul>
+        {admin && <div className="mt-1 text-xs text-muted num-cell">صافي رصيد العضو قبل القرض {sar(d.data.auto.auto_check.net_before)} · بعده {sar(d.data.auto.auto_check.net_after)} · السيولة بعد الصرف {sar(d.data.auto.auto_check.liquid_after)} مقابل احتياطي {sar(d.data.auto.auto_check.reserve)}</div>}
+      </div>}
       {Number(l.overdue_amount) > 0 && <div className="mt-3"><ErrorBox>يوجد {l.overdue_count} قسط متأخر بإجمالي {sar(l.overdue_amount)}</ErrorBox></div>}
 
       <div className="mt-4 grid gap-4 lg:grid-cols-3">

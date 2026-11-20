@@ -60,3 +60,38 @@ describe('profit distribution & period close', () => {
   });
 
 });
+
+describe('auto loan approval, calendar', () => {
+  it('auto-approves when net balance covers the loan, else waits for the manager', async () => {
+    await s.as(manager);
+    // give ali a deposit so his net balance is positive
+    await s.q(`select record_deposit($1, 3000, $2::date, 'تحويل', 'DEP-AUTO')`, [ali, today]);
+    await s.q(`select record_income('تبرعات وهبات', 'هبة لدعم السيولة', null, 20000, $1::date)`, [today]);
+    await s.sysVal(`update fund_settings set loan_block_if_overdue = false where id = 1 returning 1`);
+    const net = n(await s.sysVal(`select member_net_position($1)`, [ali]));
+    expect(net).toBeGreaterThan(1000);
+    const aliUser = await s.sysVal(`select user_id from members where id = $1`, [ali]);
+    await s.as(aliUser);
+    const chk = await s.val(`select loan_auto_check(1000)`);
+    expect(chk.reasons).toEqual([]);
+    expect(chk.auto).toBe(true);
+    const l1 = await s.val(`select request_loan(1000, 'حاجة شخصية', 5)`);
+    expect(await s.sysVal(`select status from loans where id = $1`, [l1])).toBe('approved');
+    expect(await s.sysVal(`select auto_approved from loans where id = $1`, [l1])).toBe(true);
+    // sara: no balance → waits for the manager
+    const saraUser = await s.sysVal(`select user_id from members where id = $1`, [sara]);
+    await s.as(saraUser);
+    const c2 = await s.val(`select loan_auto_check(50000)`);
+    expect(c2.auto).toBe(false);
+    const l2 = await s.val(`select request_loan(2000, 'حاجة شخصية', 5)`);
+    expect(await s.sysVal(`select status from loans where id = $1`, [l2])).toBe('pending');
+    expect((await s.sysVal(`select auto_check from loans where id = $1`, [l2])).reasons.length).toBeGreaterThan(0);
+    // calendar: own tasks only + dues
+    const t = await s.val(`select add_my_task('موعد البنك', $1::date, '10:30')`, [today]);
+    const cal = await s.val(`select my_calendar($1::date, $2::date)`, [today, today]);
+    expect(cal.tasks.length).toBe(1);
+    await s.as(aliUser);
+    await s.q(`select delete_my_task($1)`, [t]);
+    expect(await s.sysVal(`select count(*)::int from member_tasks where id = $1`, [t])).toBe(1);
+  });
+});

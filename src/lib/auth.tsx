@@ -5,7 +5,7 @@ import { supabase } from './supabase';
 import { setArabicDigits } from './format';
 
 export type Profile = { id: string; role: 'manager' | 'member'; email: string; full_name: string; is_active: boolean };
-export type FundInfo = { fund_name: string; logo_url: string | null; demo_mode: boolean; monthly_contribution: string; welcome_phrases?: string[] | null };
+export type FundInfo = { fund_name: string; logo_url: string | null; demo_mode: boolean; monthly_contribution: string; welcome_phrases?: string[] | null; ai_members_enabled?: boolean };
 
 type Ctx = {
   ready: boolean;
@@ -38,7 +38,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     const [{ data: p }, { data: m }, { data: f }] = await Promise.all([
       sb.from('app_users').select('*').eq('id', s.user.id).maybeSingle(),
       sb.from('members').select('id').eq('user_id', s.user.id).maybeSingle(),
-      sb.from('fund_settings').select('fund_name, logo_url, demo_mode, monthly_contribution, welcome_phrases').eq('id', 1).maybeSingle(),
+      sb.from('fund_settings').select('fund_name, logo_url, demo_mode, monthly_contribution, welcome_phrases, ai_members_enabled').eq('id', 1).maybeSingle(),
     ]);
     setProfile((p as Profile) ?? null);
     setMemberId(m?.id ?? null);

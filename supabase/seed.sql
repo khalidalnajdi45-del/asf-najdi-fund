@@ -16,7 +16,7 @@ declare
 begin
   if exists (select 1 from public.app_users where id <> '00000000-0000-4000-8000-00000000a5f1') then raise exception 'Seed expects an empty database'; end if;
 
-  update public.fund_settings set fund_name = 'صندوق النجدي الادخاري', demo_mode = true,
+  update public.fund_settings set fund_name = 'صندوق النجدي الادخاري', demo_mode = true, loan_auto_approve = false, ai_members_enabled = true,
          contribution_start_period = '2025-11-01', loan_block_if_overdue = false where id = 1;
 
   v_mgr := public._create_auth_user('manager@najdi-fund.demo', 'Demo@2026!', 'مدير الصندوق (تجريبي)', 'manager');
@@ -214,6 +214,6 @@ begin
      and not exists (select 1 from public.loans l where l.status = 'overdue' and n.link like '%' || l.id::text);
   -- older notifications read, recent ones unread
   update public.notifications set is_read = true, read_at = now() where type not in ('announcement','contribution_overdue','repayment_overdue');
-  update public.fund_settings set loan_block_if_overdue = true where id = 1;
+  update public.fund_settings set loan_block_if_overdue = true, loan_auto_approve = true where id = 1;
 end
 $seed$;

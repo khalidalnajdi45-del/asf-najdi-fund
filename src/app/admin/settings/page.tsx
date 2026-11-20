@@ -6,7 +6,8 @@ import { rpc } from '@/lib/supabase';
 import { useAction } from '@/lib/action';
 import { useSettings, type Settings } from '@/lib/settings';
 import { useAuth } from '@/lib/auth';
-import { dateTime } from '@/lib/format';
+import { dateTime, sar } from '@/lib/format';
+import { useData } from '@/lib/hooks';
 import { Button, Card, ErrorBox, Field, Input, Loading, MoneyInput, Notice, PageHeader, Select, Textarea } from '@/components/ui';
 
 const months = ['يناير', 'فبراير', 'مارس', 'أبريل', 'مايو', 'يونيو', 'يوليو', 'أغسطس', 'سبتمبر', 'أكتوبر', 'نوفمبر', 'ديسمبر'];
@@ -118,6 +119,8 @@ export default function SettingsPage() {
 
         <PhrasesCard initial={f.welcome_phrases} onSaved={() => { s.reload(); refresh(); }} />
         <InvestmentsViewCard mode={f.member_investments_view} onSaved={s.reload} />
+        <LoanAutoCard s={f} onSaved={s.reload} />
+        <AiCard enabled={!!f.ai_members_enabled} onSaved={s.reload} />
 
         <Card title="الاعتمادات وتوزيع الأرباح" className="lg:col-span-2">
           <Notice tone="gold">لا يفترض النظام أي توزيع أرباح. سجّل هنا السياسة المعتمدة من الجمعية العمومية عند إقرارها؛ تُحفظ مع سجل تدقيق ويمكن بناء التوزيع عليها لاحقاً.</Notice>
@@ -209,6 +212,42 @@ function InvestmentsViewCard({ mode, onSaved }: { mode: 'hidden' | 'names' | 'fu
           </label>
         ))}
       </div>
+    </Card>
+  );
+}
+
+function LoanAutoCard({ s, onSaved }: { s: any; onSaved: () => void }) {
+  const a = useAction();
+  const [f, setF] = useState({ auto: s.loan_auto_approve !== false, pct: String(s.loan_reserve_pct ?? 30), min: String(s.loan_min_cash ?? 5000) });
+  const liq = useData<any>(() => rpc('liquidity_report'));
+  const save = async () => { if (await a.run(() => rpc('set_loan_auto_policy', { p_auto: f.auto, p_reserve_pct: f.pct, p_min_cash: f.min }).then(() => true), 'تم حفظ سياسة القبول التلقائي')) { onSaved(); liq.reload(); } };
+  const L = liq.data;
+  return (
+    <Card title="القبول التلقائي للقروض" subtitle="يُعتمد الطلب تلقائياً إذا بقي صافي رصيد العضو موجباً بعد القرض، وبقيت سيولة الصندوق فوق الاحتياطي — وإلا ينتظر موافقتك. الصرف يبقى يدوياً."
+      actions={<Button size="sm" onClick={save} loading={a.busy}>حفظ</Button>}>
+      <label className="mb-3 flex items-center gap-2 text-sm"><input type="checkbox" className="size-4 accent-brand-600" checked={f.auto} onChange={e => setF({ ...f, auto: e.target.checked })} /> تفعيل القبول التلقائي</label>
+      <div className="grid grid-cols-2 gap-3">
+        <Field label="الاحتياطي: نسبة من ودائع الأعضاء (%)"><Input type="number" min={0} max={100} dir="ltr" value={f.pct} onChange={e => setF({ ...f, pct: e.target.value })} /></Field>
+        <Field label="حد أدنى للسيولة (ريال)"><Input type="number" min={0} dir="ltr" value={f.min} onChange={e => setF({ ...f, min: e.target.value })} /></Field>
+      </div>
+      {L && <div className="mt-3 grid grid-cols-2 gap-2 rounded-xl bg-canvas p-3 text-xs sm:grid-cols-4">
+        <div><div className="text-muted">النقد</div><div className="font-semibold num-cell">{sar(L.cash)}</div></div>
+        <div><div className="text-muted">ودائع بنكية</div><div className="font-semibold num-cell">{sar(L.bank_deposits)}</div></div>
+        <div><div className="text-muted">السيولة</div><div className="font-semibold num-cell">{sar(L.liquid)}</div></div>
+        <div><div className="text-muted">الاحتياطي المطلوب</div><div className="font-semibold num-cell">{sar(L.reserve)}</div></div>
+      </div>}
+      <ErrorBox>{a.error}</ErrorBox>
+    </Card>
+  );
+}
+
+function AiCard({ enabled, onSaved }: { enabled: boolean; onSaved: () => void }) {
+  const a = useAction();
+  const toggle = async (v: boolean) => { if (await a.run(() => rpc('set_ai_members', { p_enabled: v }).then(() => true), 'تم الحفظ')) onSaved(); };
+  return (
+    <Card title="المستشار المالي (AI)" subtitle="متاح لك دائماً. فعّله للأعضاء ليسألوا عن حساباتهم — يقرأ بيانات العضو نفسه فقط ولا ينفذ أي عملية.">
+      <label className="flex items-center gap-2 text-sm"><input type="checkbox" className="size-4 accent-brand-600" checked={enabled} disabled={a.busy} onChange={e => toggle(e.target.checked)} /> إتاحة المستشار للأعضاء</label>
+      <ErrorBox>{a.error}</ErrorBox>
     </Card>
   );
 }

@@ -33,9 +33,10 @@ export default function MembersPage() {
 
   const exportList = () => exportXlsx('الأعضاء', [{
     name: 'الأعضاء',
-    header: ['رقم العضو', 'الاسم', 'الحالة', 'تاريخ الانضمام', 'إجمالي الاشتراكات', 'اشتراكات متأخرة', 'رصيد الودائع', 'القروض القائمة'],
+    header: ['رقم العضو', 'الاسم', 'الحالة', 'تاريخ الانضمام', 'إجمالي الاشتراكات', 'اشتراكات متأخرة', 'رصيد الودائع', 'القروض القائمة', 'صافي الرصيد'],
     rows: (data ?? []).map(m => [m.member_no, m.full_name, m.status === 'active' ? 'نشط' : 'غير نشط', m.join_date,
-      n2(m.contributions_total), n2(m.contributions_overdue), n2(m.deposit_balance), n2(m.loan_outstanding)]),
+      n2(m.contributions_total), n2(m.contributions_overdue), n2(m.deposit_balance), n2(m.loan_outstanding),
+      n2(Number(m.contributions_total) + Number(m.deposit_balance) - Number(m.loan_outstanding))]),
   }]);
 
   return (
@@ -60,6 +61,8 @@ export default function MembersPage() {
             { key: 'contributions_overdue', header: 'متأخرات', align: 'end', render: r => Number(r.contributions_overdue) > 0 ? <span className="text-neg">{sar(r.contributions_overdue)}</span> : '—' },
             { key: 'deposit_balance', header: 'رصيد الودائع', align: 'end', render: r => sar(r.deposit_balance) },
             { key: 'loan_outstanding', header: 'قروض قائمة', align: 'end', render: r => Number(r.loan_outstanding) > 0 ? sar(r.loan_outstanding) : '—' },
+            { key: 'net', header: 'صافي الرصيد', align: 'end', render: r => { const v = Number(r.contributions_total) + Number(r.deposit_balance) - Number(r.loan_outstanding);
+              return <span className={`font-semibold ${v < 0 ? 'text-neg' : 'text-brand-700'}`}>{sar(v)}</span>; } },
           ]} />
       </Card>
 
