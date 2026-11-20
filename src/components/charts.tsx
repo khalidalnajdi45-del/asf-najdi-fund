@@ -3,7 +3,7 @@ import { Bar, BarChart, CartesianGrid, Legend, Line, LineChart, ResponsiveContai
 import { monthLabel, num, pct, plain, sar } from '@/lib/format';
 
 const C = { brand: '#4a2a5a', brandSoft: '#d6bc8c', clay: '#a8654a', gold: '#b8925a', grid: '#ece4d6', axis: '#736a74' };
-const shortMonth = (v: string) => new Intl.DateTimeFormat('ar-SA-u-nu-latn', { month: 'short' }).format(new Date(`${v.slice(0, 7)}-01T12:00:00`));
+const shortMonth = (v: string) => new Intl.DateTimeFormat('ar-SA-u-ca-gregory-nu-latn', { month: 'short' }).format(new Date(`${v.slice(0, 7)}-01T12:00:00`));
 
 function Tip({ active, payload, label, money = true, isPct }: any) {
   if (!active || !payload?.length) return null;

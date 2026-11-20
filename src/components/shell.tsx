@@ -4,7 +4,7 @@ import { useEffect, useState, type ReactNode } from 'react';
 import clsx from 'clsx';
 import {
   ArrowUpFromLine, BarChart3, Bell, BookOpen, CalendarCheck, FileText, HandCoins, LayoutDashboard, LogOut, Menu,
-  PiggyBank, Receipt, ScrollText, Settings, ShieldCheck, TrendingUp, Coins, Gift, Lock, Sparkles, User, Users, Wallet, X, FileClock, PartyPopper, Mail, Send,
+  PiggyBank, Receipt, ScrollText, Settings, ShieldCheck, TrendingUp, Coins, Gift, Lock, Sparkles, PieChart, User, Users, Wallet, X, FileClock, PartyPopper, Mail, Send,
 } from 'lucide-react';
 import { useAuth } from '@/lib/auth';
 import { ForcePasswordChange } from './force-password';
@@ -18,7 +18,7 @@ type NavItem = { href: string; label: string; icon: ReactNode; group?: string };
 const ic = 'size-[18px]';
 export const managerNav: NavItem[] = [
   { href: '/admin/', label: 'لوحة التحكم', icon: <LayoutDashboard className={ic} /> },
-  { href: '/admin/advisor/', label: 'المستشار المالي', icon: <Sparkles className={ic} /> },
+  { href: '/admin/advisor/', label: 'نَجْد | NAJD AI', icon: <Sparkles className={ic} /> },
   { href: '/admin/members/', label: 'الأعضاء', icon: <Users className={ic} />, group: 'العمليات' },
   { href: '/admin/contributions/', label: 'الاشتراكات الشهرية', icon: <CalendarCheck className={ic} />, group: 'العمليات' },
   { href: '/admin/deposits/', label: 'الودائع', icon: <PiggyBank className={ic} />, group: 'العمليات' },
@@ -46,10 +46,11 @@ export const memberNav: NavItem[] = [
   { href: '/member/contributions/', label: 'اشتراكاتي', icon: <CalendarCheck className={ic} /> },
   { href: '/member/deposits/', label: 'ودائعي', icon: <Wallet className={ic} /> },
   { href: '/member/loans/', label: 'قروضي', icon: <HandCoins className={ic} /> },
+  { href: '/member/finance/', label: 'ماليتي', icon: <PieChart className={ic} /> },
   { href: '/member/transactions/', label: 'عملياتي', icon: <FileClock className={ic} /> },
   { href: '/member/reports/', label: 'تقاريري الشهرية', icon: <Mail className={ic} /> },
   { href: '/member/investments/', label: 'استثمارات الصندوق', icon: <TrendingUp className={ic} /> },
-  { href: '/member/advisor/', label: 'المستشار المالي', icon: <Sparkles className={ic} /> },
+  { href: '/member/advisor/', label: 'نَجْد | NAJD AI', icon: <Sparkles className={ic} /> },
   { href: '/member/statements/', label: 'كشوف الحساب', icon: <ScrollText className={ic} /> },
   { href: '/member/events/', label: 'المناسبات', icon: <PartyPopper className={ic} /> },
   { href: '/member/notifications/', label: 'الإشعارات', icon: <Bell className={ic} /> },

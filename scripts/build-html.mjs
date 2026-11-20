@@ -44,6 +44,7 @@ if (ARTIFACT) {
   mkdirSync('dist/artifact', { recursive: true });
   const body = html.replace(/^<!doctype html><html[^>]*><head>/, '').replace('</head><body>', '').replace('</body></html>', '')
     .replace('<meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">', '');
-  writeFileSync(out, body);
+  // the artifact host supplies its own <html>, so set RTL + Arabic before anything renders
+  writeFileSync(out, `<script>document.documentElement.dir='rtl';document.documentElement.lang='ar'</script>\n` + body);
 } else writeFileSync(out, html);
 console.log(out, (html.length / 1024 / 1024).toFixed(2), 'MB');

@@ -1,4 +1,4 @@
-// المستشار المالي — AI advisor for the fund (Claude API + read-only tools).
+// نَجْد | NAJD AI — مستشارك المالي: AI advisor for the fund (Claude API + read-only tools).
 // Every tool runs with the CALLER's own JWT, so Postgres RLS and the RPC role checks decide what it may read:
 // a member only ever sees their own data; the manager sees the fund. The advisor never writes anything.
 // Secrets: ANTHROPIC_API_KEY (required), AI_MODEL (optional).
@@ -19,6 +19,9 @@ const obj = (props: Record<string, any> = {}, required: string[] = []) => ({ typ
 const D = { type: 'string', description: 'تاريخ YYYY-MM-DD' };
 const data = async (p: any) => { const { data, error } = await p; if (error) throw new Error(error.message); return data; };
 
+const PF_TOOL: Tool = { name: 'my_personal_finance', description: '«ماليتي» — المالية الشخصية الخاصة بالمستخدم نفسه لشهر معين: الدخل، المصروف، المصاريف حسب التصنيف مع الميزانيات، العمليات، المتكرر الشهري، الأهداف الادخارية، آخر 6 أشهر، والتزاماته للصندوق.', input_schema: obj({ month: { type: 'string', description: 'أي تاريخ داخل الشهر YYYY-MM-DD (افتراضي الشهر الحالي)' } }),
+  run: (sb, i) => data(sb.rpc('pf_overview', { p_month: i.month ?? null })) };
+
 const MEMBER_TOOLS: Tool[] = [
   { name: 'my_overview', description: 'ملخص حساب العضو: الاشتراكات، الودائع، القروض، المتأخرات، آخر العمليات، القرض الحالي.', input_schema: obj(),
     run: sb => data(sb.rpc('member_dashboard', { p_member: null })) },
@@ -34,6 +37,7 @@ const MEMBER_TOOLS: Tool[] = [
     run: sb => data(sb.rpc('member_investments')) },
   { name: 'my_calendar', description: 'مواعيد العضو: مهامه، مناسبات الصندوق، مواعيد الاشتراك والأقساط بين تاريخين.', input_schema: obj({ from: D, to: D }, ['from', 'to']),
     run: (sb, i) => data(sb.rpc('my_calendar', { p_from: i.from, p_to: i.to })) },
+  PF_TOOL,
 ];
 
 const MANAGER_TOOLS: Tool[] = [
@@ -57,10 +61,11 @@ const MANAGER_TOOLS: Tool[] = [
     run: sb => data(sb.from('v_investment_positions').select('name,category,provider,status,investment_date,cost_basis,current_value,unrealized_pl,realized_pl,income_received')) },
   { name: 'recent_transactions', description: 'آخر العمليات على مستوى الصندوق.', input_schema: obj({ limit: { type: 'number' } }),
     run: (sb, i) => data(sb.from('v_transactions').select('tx_no,tx_date,tx_type,amount,member_name,description,is_reversed').order('tx_date', { ascending: false }).limit(Math.min(150, i.limit ?? 50))) },
+  PF_TOOL,
 ];
 
 function system(role: string, name: string, fund: string) {
-  return `أنت «المستشار المالي» في منصة ${fund} — صندوق ادخاري عائلي سعودي (الاشتراك الشهري، ودائع اختيارية، قروض حسنة بدون فوائد، واستثمارات منخفضة إلى متوسطة المخاطر في السوق السعودية وودائع بنكية).
+  return `اسمك «نَجْد» (NAJD AI) — المستشار المالي في منصة ${fund}، وهو صندوق ادخاري عائلي سعودي (الاشتراك الشهري، ودائع اختيارية، قروض حسنة بدون فوائد، واستثمارات منخفضة إلى متوسطة المخاطر في السوق السعودية وودائع بنكية). عرّف بنفسك باسم «نَجْد — مستشارك المالي» إذا سُئلت عن هويتك.
 تتحدث مع ${role === 'manager' ? `مدير الصندوق (${name})` : `العضو ${name}`}. اليوم ${today()} (توقيت الرياض). العملة ريال سعودي.
 
 قواعد:
@@ -70,6 +75,7 @@ function system(role: string, name: string, fund: string) {
 - لا تقدم توصيات شراء/بيع لسهم بعينه كاستشارة استثمارية مرخصة؛ يمكنك التحليل والشرح (التركّز، المخاطر، الأداء) مع التنبيه بأن القرار للإدارة.
 ${role === 'manager' ? '- يمكنك صياغة رسائل تذكير للأعضاء بلطف، وتحليل السيولة قبل اعتماد القروض، وتلخيص الأداء.' : '- لا تكشف أي بيانات لأعضاء آخرين؛ الأدوات تعطيك بيانات هذا العضو فقط وأرقام الصندوق العامة.'}
 - صافي رصيد العضو = اشتراكاته المدفوعة + رصيد ودائعه − قروضه القائمة. القرض يُعتمد تلقائياً إذا بقي الصافي موجباً بعد القرض وبقيت سيولة الصندوق فوق الاحتياطي؛ وإلا يراجعه المدير. الصرف دائماً يدوي من المدير.
+- «ماليتي» (أداة my_personal_finance) هي المالية الشخصية الخاصة بالمستخدم نفسه فقط (دخله ومصاريفه وميزانيته وأهدافه) — ساعده يفهم أين يصرف، ويضع ميزانية واقعية، ويحسب كم يدخر شهرياً لأهدافه، واقترح الإيداع في الصندوق عند وجود فائض. لا تحكم عليه، وكن عملياً ولطيفاً.
 - استخدم قوائم قصيرة أو جداول بسيطة عند الحاجة، وتجنب الإطالة.`;
 }
 
@@ -77,7 +83,7 @@ Deno.serve(async req => {
   if (req.method === 'OPTIONS') return new Response('ok', { headers: cors });
   if (req.method !== 'POST') return json({ error: 'method not allowed' }, 405);
   const key = env('ANTHROPIC_API_KEY');
-  if (!key) return json({ error: 'المستشار غير مفعّل بعد — أضف ANTHROPIC_API_KEY في أسرار Edge Functions' }, 503);
+  if (!key) return json({ error: 'نَجْد غير مفعّل بعد — أضف ANTHROPIC_API_KEY في أسرار Edge Functions' }, 503);
 
   const jwt = (req.headers.get('Authorization') ?? '').replace(/^Bearer\s+/i, '');
   const admin = createClient(env('SUPABASE_URL'), env('SUPABASE_SERVICE_ROLE_KEY'), { auth: { persistSession: false } });
@@ -86,7 +92,7 @@ Deno.serve(async req => {
   const { data: au } = await admin.from('app_users').select('role, is_active, full_name').eq('id', u.user.id).maybeSingle();
   if (!au?.is_active) return json({ error: 'الحساب غير نشط' }, 403);
   const { data: st } = await admin.from('fund_settings').select('fund_name, ai_members_enabled').eq('id', 1).single();
-  if (au.role !== 'manager' && !st?.ai_members_enabled) return json({ error: 'المستشار المالي غير متاح للأعضاء حالياً' }, 403);
+  if (au.role !== 'manager' && !st?.ai_members_enabled) return json({ error: 'نَجْد | NAJD AI غير متاح للأعضاء حالياً' }, 403);
 
   const body = await req.json().catch(() => ({})) as { message?: string };
   const message = String(body.message ?? '').trim().slice(0, 2000);

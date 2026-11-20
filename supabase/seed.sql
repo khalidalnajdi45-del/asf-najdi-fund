@@ -214,6 +214,37 @@ begin
      and not exists (select 1 from public.loans l where l.status = 'overdue' and n.link like '%' || l.id::text);
   -- older notifications read, recent ones unread
   update public.notifications set is_read = true, read_at = now() where type not in ('announcement','contribution_overdue','repayment_overdue');
+  -- ---------------- «ماليتي» demo for member02 (private personal finance)
+  perform public._pf_ensure(v_u[2]);
+  declare c record; mo date; k int;
+  begin
+    for k in 0..3 loop
+      mo := (date_trunc('month', v_cur) - make_interval(months => k))::date;
+      for c in select * from (values
+          ('income','الراتب',14500::numeric,1,'الراتب'),
+          ('expense','سكن وإيجار',3200,1,'إيجار الشقة'),
+          ('expense','بقالة وتموين',640 + k*35,4,'بنده'),
+          ('expense','بقالة وتموين',410 - k*20,15,'العثيم'),
+          ('expense','مطاعم ومقاهي',185 + k*12,6,'ستاربكس والبيك'),
+          ('expense','مطاعم ومقاهي',260,19,'جاهز'),
+          ('expense','مواصلات ووقود',300 - k*10,8,'الدريس'),
+          ('expense','فواتير واتصالات',230,10,'STC'),
+          ('expense','مصروف البيت',900,2,'مصروف البيت'),
+          ('expense','مناسبات العائلة',case when k = 1 then 1500 else 350 end,22,'هدية مناسبة'),
+          ('expense','التزامات الصندوق',1000,3,'اشتراك الصندوق')) v(kind, cat, amt, d, note) loop
+        if mo + (c.d - 1) <= public.fund_today() then
+          insert into public.pf_transactions(user_id, kind, amount, category_id, note, tx_date, source)
+          values (v_u[2], c.kind, c.amt, (select id from public.pf_categories where user_id = v_u[2] and kind = c.kind and name = c.cat),
+                  c.note, mo + (c.d - 1), case when c.note in ('بنده','جاهز','STC') then 'sms' else 'manual' end);
+        end if;
+      end loop;
+    end loop;
+    insert into public.pf_budgets select v_u[2], id, b from public.pf_categories, (values ('بقالة وتموين',1200),('مطاعم ومقاهي',500),('مواصلات ووقود',400),('مصروف البيت',1000)) x(n,b)
+      where user_id = v_u[2] and kind = 'expense' and name = x.n;
+    insert into public.pf_goals(user_id, title, target, saved, target_date) values
+      (v_u[2], 'سفرة الصيف', 12000, 4500, (date_trunc('year', v_cur) + interval '1 year 6 months')::date),
+      (v_u[2], 'دفعة سيارة', 30000, 8000, null);
+  end;
   update public.fund_settings set loan_block_if_overdue = true, loan_auto_approve = true where id = 1;
 end
 $seed$;

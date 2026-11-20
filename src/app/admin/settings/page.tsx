@@ -245,8 +245,8 @@ function AiCard({ enabled, onSaved }: { enabled: boolean; onSaved: () => void })
   const a = useAction();
   const toggle = async (v: boolean) => { if (await a.run(() => rpc('set_ai_members', { p_enabled: v }).then(() => true), 'تم الحفظ')) onSaved(); };
   return (
-    <Card title="المستشار المالي (AI)" subtitle="متاح لك دائماً. فعّله للأعضاء ليسألوا عن حساباتهم — يقرأ بيانات العضو نفسه فقط ولا ينفذ أي عملية.">
-      <label className="flex items-center gap-2 text-sm"><input type="checkbox" className="size-4 accent-brand-600" checked={enabled} disabled={a.busy} onChange={e => toggle(e.target.checked)} /> إتاحة المستشار للأعضاء</label>
+    <Card title="نَجْد | NAJD AI — مستشارك المالي" subtitle="متاح لك دائماً. فعّله للأعضاء ليسألوا عن حساباتهم — يقرأ بيانات العضو نفسه فقط ولا ينفذ أي عملية.">
+      <label className="flex items-center gap-2 text-sm"><input type="checkbox" className="size-4 accent-brand-600" checked={enabled} disabled={a.busy} onChange={e => toggle(e.target.checked)} /> إتاحة نَجْد للأعضاء</label>
       <ErrorBox>{a.error}</ErrorBox>
     </Card>
   );

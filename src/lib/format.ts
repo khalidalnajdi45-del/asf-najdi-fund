@@ -4,7 +4,7 @@
 let arabicDigits = false;
 export function setArabicDigits(v: boolean) { arabicDigits = v; }
 export function getArabicDigits() { return arabicDigits; }
-const locale = () => (arabicDigits ? 'ar-SA' : 'ar-SA-u-nu-latn');
+const locale = () => (arabicDigits ? 'ar-SA-u-ca-gregory' : 'ar-SA-u-ca-gregory-nu-latn');
 
 export function num(v: unknown): number {
   if (v === null || v === undefined || v === '') return 0;

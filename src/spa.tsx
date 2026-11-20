@@ -36,6 +36,7 @@ import PDist from '@/app/admin/distributions/page';
 import PPer from '@/app/admin/periods/page';
 import PAdv from '@/app/admin/advisor/page';
 import PMAdv from '@/app/member/advisor/page';
+import PMFin from '@/app/member/finance/page';
 import P20 from '@/app/admin/settings/page';
 import P21 from '@/app/member/profile/page';
 import P22 from '@/app/admin/members/page';
@@ -82,6 +83,7 @@ const ROUTES: Record<string, ComponentType> = {
   '/admin/periods/': PPer,
   '/admin/advisor/': PAdv,
   '/member/advisor/': PMAdv,
+  '/member/finance/': PMFin,
   '/admin/settings/': P20,
   '/member/profile/': P21,
   '/admin/members/': P22,

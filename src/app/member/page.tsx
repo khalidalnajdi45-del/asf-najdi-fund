@@ -1,9 +1,9 @@
 'use client';
 import { go } from '@/lib/nav';
 import { ArrowLeft, CalendarCheck, HandCoins, PiggyBank, Plus, Wallet } from 'lucide-react';
-import { rpc } from '@/lib/supabase';
-import { useData } from '@/lib/hooks';
-import { date, monthLabel, sar } from '@/lib/format';
+import { rpc, supabase } from '@/lib/supabase';
+import { q, useData } from '@/lib/hooks';
+import { date, monthLabel, num, sar } from '@/lib/format';
 import { txTypeLabels, loanStatus } from '@/lib/labels';
 import { useAuth } from '@/lib/auth';
 import { Badge, Button, Card, DataTable, ErrorBox, Loading, Stat, Tag } from '@/components/ui';
@@ -15,6 +15,8 @@ import { NextEventStrip } from '@/components/events';
 
 export default function MemberDashboard() {
   const { data: d, error, loading } = useData<any>(() => rpc('member_dashboard', { p_member: null }));
+  const { memberId } = useAuth();
+  const loans = useData<any[]>(() => memberId ? q(supabase().from('v_loan_summary').select('*').eq('member_id', memberId).in('status', ['disbursed', 'active', 'overdue']).order('created_at')) : Promise.resolve([]), [memberId]);
   if (loading && !d) return <Loading />;
   if (error) return <ErrorBox>{error}</ErrorBox>;
   if (!d) return null;
@@ -44,8 +46,8 @@ export default function MemberDashboard() {
           hint={cur && Number(cur.amount_outstanding) > 0 ? `المتبقي ${sar(cur.amount_outstanding)} — يستحق ${date(cur.due_date)}` : cur ? 'شكراً لك' : undefined} />
       </div>
 
-      {loan && <Card className="mt-4" title="قرضي الحالي" actions={<a href={`/member/loans/view/?id=${loan.id}`} className="flex items-center gap-1 text-xs text-brand-600">التفاصيل وجدول السداد <ArrowLeft className="size-3.5" /></a>}>
-        <LoanDonut loan={loan} />
+      {!!loans.data?.length && <Card className="mt-4" title={loans.data.length > 1 ? `قروضي (${loans.data.length})` : 'قرضي'} actions={<a href="/member/loans/" className="flex items-center gap-1 text-xs text-brand-600">كل القروض <ArrowLeft className="size-3.5" /></a>}>
+        <LoansDonut loans={loans.data} />
       </Card>}
 
       <div className="mt-4 grid gap-4 lg:grid-cols-3">
@@ -98,28 +100,39 @@ function NetCard({ b }: { b: any }) {
   );
 }
 
-function LoanDonut({ loan }: { loan: any }) {
-  const total = Number(loan.total_repayable) || 1, paid = Number(loan.amount_repaid), over = Number(loan.overdue_amount ?? 0);
+function LoansDonut({ loans }: { loans: any[] }) {
+  const sum = (k: string) => loans.reduce((a, l) => a + num(l[k] ?? 0), 0);
+  const total = sum('total_repayable') || 1, paid = sum('amount_repaid'), over = sum('overdue_amount'), out = sum('outstanding');
   const rest = Math.max(0, total - paid - over);
+  const next = loans.filter(l => l.next_due_date).sort((a, b) => a.next_due_date.localeCompare(b.next_due_date))[0];
   const R = 42, C = 2 * Math.PI * R;
   const seg = (v: number) => (v / total) * C;
   const parts = [[paid, 'var(--color-gold-500)'], [over, 'var(--color-clay)'], [rest, 'var(--color-brand-100)']] as const;
   let off = 0;
   return (
-    <div className="flex flex-col items-center gap-5 sm:flex-row sm:gap-6">
-      <div className="relative size-36 shrink-0">
+    <div className="grid gap-5 md:grid-cols-[auto_1fr_1fr] md:items-center md:gap-6">
+      <div className="relative mx-auto size-36 shrink-0">
         <svg viewBox="0 0 100 100" className="size-36 -rotate-90">
           <circle cx="50" cy="50" r={R} fill="none" stroke="var(--color-canvas)" strokeWidth="11" />
           {parts.map(([v, col], i) => { const el = v > 0 ? <circle key={i} cx="50" cy="50" r={R} fill="none" stroke={col} strokeWidth="11" strokeDasharray={`${seg(v)} ${C}`} strokeDashoffset={-off} /> : null; off += seg(v); return el; })}
         </svg>
         <span className="absolute inset-0 flex flex-col items-center justify-center"><span className="text-xl font-semibold num-cell">{Math.round((paid / total) * 100)}%</span><span className="text-[10px] text-muted">مسدد</span></span>
       </div>
-      <ul className="w-full min-w-0 flex-1 space-y-2 text-sm">
+      <ul className="w-full min-w-0 space-y-2 text-sm">
+        <li className="flex justify-between gap-3 font-medium"><span>إجمالي القروض</span><span className="num-cell">{sar(total)}</span></li>
         <li className="flex justify-between gap-3"><span className="flex items-center gap-2"><span className="size-2.5 rounded-full bg-gold-500" />المسدد</span><span className="num-cell">{sar(paid)}</span></li>
         {over > 0 && <li className="flex justify-between gap-3 text-neg"><span className="flex items-center gap-2"><span className="size-2.5 rounded-full bg-clay" />متأخر</span><span className="num-cell">{sar(over)}</span></li>}
-        <li className="flex justify-between gap-3"><span className="flex items-center gap-2"><span className="size-2.5 rounded-full bg-brand-100" />المتبقي</span><span className="num-cell">{sar(rest)}</span></li>
-        <li className="flex justify-between gap-3 border-t border-line pt-2 text-muted"><span>القسط القادم</span><span className="num-cell">{sar(loan.next_due_amount)} · {date(loan.next_due_date)}</span></li>
-        <li className="flex justify-between gap-3 text-xs text-muted"><span className="num-cell">{loan.loan_no}</span><Badge status={loanStatus(loan.status)} /></li>
+        <li className="flex justify-between gap-3"><span className="flex items-center gap-2"><span className="size-2.5 rounded-full bg-brand-100" />المتبقي</span><span className="num-cell">{sar(out)}</span></li>
+        {next && <li className="flex justify-between gap-3 border-t border-line pt-2 text-muted"><span>أقرب قسط</span><span className="num-cell">{sar(next.next_due_amount)} · {date(next.next_due_date)}</span></li>}
+      </ul>
+      <ul className="w-full min-w-0 space-y-1.5 border-t border-line pt-4 text-sm md:border-r md:border-t-0 md:pe-0 md:ps-0 md:pr-5 md:pt-0">
+        {loans.map(l => {
+          const pct = Math.round((num(l.amount_repaid) / (num(l.total_repayable) || 1)) * 100);
+          return <li key={l.id}><a href={`/member/loans/view/?id=${l.id}`} className="block rounded-lg px-2.5 py-2 hover:bg-canvas">
+            <span className="flex items-center justify-between gap-2"><span className="flex items-center gap-2"><span className="text-xs text-muted num-cell">{l.loan_no}</span><Badge status={loanStatus(l.status)} /></span><span className="font-medium num-cell">{sar(l.outstanding)}</span></span>
+            <span className="mt-1.5 block h-1.5 overflow-hidden rounded-full bg-brand-50"><span className="block h-full rounded-full bg-gold-500" style={{ width: `${pct}%` }} /></span>
+          </a></li>;
+        })}
       </ul>
     </div>
   );

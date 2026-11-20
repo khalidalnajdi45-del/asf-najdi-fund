@@ -15,7 +15,16 @@ type Cal = {
 const MONTHS = ['يناير', 'فبراير', 'مارس', 'أبريل', 'مايو', 'يونيو', 'يوليو', 'أغسطس', 'سبتمبر', 'أكتوبر', 'نوفمبر', 'ديسمبر'];
 const DOW = ['أحد', 'إثنين', 'ثلاثاء', 'أربعاء', 'خميس', 'جمعة', 'سبت'];
 const iso = (y: number, m: number, d: number) => `${y}-${String(m + 1).padStart(2, '0')}-${String(d).padStart(2, '0')}`;
-const dayName = (d: string) => new Intl.DateTimeFormat('ar-SA-u-nu-latn-ca-gregory', { weekday: 'long', day: 'numeric', month: 'long' }).format(new Date(`${d}T12:00:00`));
+const dayName = (d: string) => new Intl.DateTimeFormat('ar-SA-u-ca-gregory-nu-latn', { weekday: 'long', day: 'numeric', month: 'long' }).format(new Date(`${d}T12:00:00`));
+const H = (opts: Intl.DateTimeFormatOptions) => { try { return new Intl.DateTimeFormat('ar-SA-u-ca-islamic-umalqura-nu-latn', { timeZone: 'UTC', ...opts }); } catch { return null; } };
+const hDay = H({ day: 'numeric' }), hFull = H({ day: 'numeric', month: 'long', year: 'numeric' }), hMonth = H({ month: 'long' }), hYear = H({ year: 'numeric' });
+const clean = (s: string) => s.replace(/[\u200e\u200f\u061c]/g, '').replace(/\s*هـ$/, '').trim();
+const hijri = (f: Intl.DateTimeFormat | null, d: string) => (f ? clean(f.format(new Date(`${d}T12:00:00Z`))) : '');
+/** Hijri month span of a Gregorian month, e.g. "جمادى الأولى – جمادى الآخرة 1448". */
+const hijriSpan = (a: string, b: string) => {
+  const m1 = hijri(hMonth, a), m2 = hijri(hMonth, b), y2 = hijri(hYear, b);
+  return m1 === m2 ? `${m1} ${y2}` : `${m1} – ${m2} ${y2}`;
+};
 
 /** Member's month: own tasks (private), fund events and their payment due dates. */
 export function MemberCalendar() {
@@ -57,7 +66,9 @@ export function MemberCalendar() {
         <span className="flex items-center gap-2 font-semibold"><CalendarDays className="size-5 text-gold-700" /> تقويمي</span>
         <span className="flex items-center gap-1">
           <button onClick={() => move(-1)} className="rounded-lg p-1.5 hover:bg-canvas" aria-label="الشهر السابق"><ChevronRight className="size-4" /></button>
-          <button onClick={() => { setYm([Number(t.slice(0, 4)), Number(t.slice(5, 7)) - 1]); setSel(t); }} className="min-w-28 text-center text-sm font-medium">{MONTHS[m]} <span className="num-cell">{y}</span></button>
+          <button onClick={() => { setYm([Number(t.slice(0, 4)), Number(t.slice(5, 7)) - 1]); setSel(t); }} className="min-w-32 text-center leading-tight">
+            <span className="block text-sm font-medium">{MONTHS[m]} <span className="num-cell">{y}</span></span>
+            <span className="block text-[10px] text-muted">{hijriSpan(from, to)}</span></button>
           <button onClick={() => move(1)} className="rounded-lg p-1.5 hover:bg-canvas" aria-label="الشهر التالي"><ChevronLeft className="size-4" /></button>
         </span>
       </div>
@@ -72,8 +83,9 @@ export function MemberCalendar() {
                 <button key={k} onClick={() => setSel(k)}
                   className={clsx('relative flex aspect-square flex-col items-center justify-center rounded-xl text-sm transition num-cell',
                     isS ? 'bg-brand-600 text-white shadow-sm' : isT ? 'bg-gold-100 font-semibold text-brand-700' : 'hover:bg-canvas')}>
-                  {i + 1}
-                  {info && <span className="absolute bottom-1 flex gap-0.5">
+                  <span className="leading-none">{i + 1}</span>
+                  <span className={clsx('mt-0.5 text-[9px] leading-none', isS ? 'text-white/70' : 'text-muted')}>{hijri(hDay, k)}</span>
+                  {info && <span className="absolute bottom-0.5 flex gap-0.5">
                     {info.e > 0 && <span className={clsx('size-1.5 rounded-full', isS ? 'bg-gold-300' : 'bg-gold-500')} />}
                     {info.due > 0 && <span className={clsx('size-1.5 rounded-full', info.overdue ? 'bg-neg' : isS ? 'bg-white' : 'bg-clay')} />}
                     {info.t > 0 && <span className={clsx('size-1.5 rounded-full', isS ? 'bg-brand-200' : 'bg-brand-500')} />}
@@ -90,7 +102,8 @@ export function MemberCalendar() {
         </div>
 
         <div className="border-t border-line bg-canvas/50 p-4 md:border-r md:border-t-0">
-          <div className="mb-3 text-sm font-semibold">{dayName(sel)}</div>
+          <div className="mb-3"><div className="text-sm font-semibold">{dayName(sel)}</div>
+            <div className="text-xs text-muted">{hijri(hFull, sel)} هـ</div></div>
           <ul className="space-y-2">
             {events.map(x => <li key={x.id}><a href="/member/events/" className="flex items-start gap-2.5 rounded-lg bg-surface p-2.5 text-sm shadow-xs hover:shadow-sm">
               <PartyPopper className="mt-0.5 size-4 shrink-0 text-gold-700" /><span className="min-w-0"><span className="block font-medium">{x.title}</span>

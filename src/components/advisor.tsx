@@ -11,7 +11,7 @@ type Msg = { role: 'user' | 'assistant'; content: string; pending?: boolean; err
 
 const SUGGEST = {
   manager: ['كيف وضع السيولة؟ وهل نقدر نصرف قرض 15 ألف؟', 'مين عليه متأخرات وكم؟ واكتب لي رسالة تذكير لطيفة', 'وش أكبر تركّز في محفظة الأسهم ونسبته؟', 'لخّص لي أداء الصندوق من بداية السنة'],
-  member: ['كم صافي رصيدي؟ وكم أقدر آخذ قرض بقبول تلقائي؟', 'لو أخذت قرض 6,000 على 12 شهر كم القسط؟', 'وش مواعيد السداد الجاية علي؟', 'أبي أجمع 10 آلاف خلال سنة، كم أودع شهرياً؟'],
+  member: ['كم صافي رصيدي؟ وكم أقدر آخذ قرض بقبول تلقائي؟', 'لو أخذت قرض 6,000 على 12 شهر كم القسط؟', 'وين أكثر شي صرفت فيه هالشهر؟', 'أبي أجمع 10 آلاف خلال سنة، كم أودع شهرياً؟'],
 };
 
 /** Minimal, safe markdown: paragraphs, **bold**, bullet lists, simple pipe tables. */
@@ -64,13 +64,13 @@ export function AdvisorPage() {
     try {
       if (IS_DEMO) {
         await new Promise(r => setTimeout(r, 900));
-        answer = 'هذي نسخة تجريبية — المستشار ما يتصل بالذكاء الاصطناعي هنا.\n\nفي المنصة الفعلية يقرأ أرقامك الحقيقية من الصندوق ويجاوبك عليها مباشرة، مثل:\n- **صافي رصيدك** وكم تقدر تطلب قرض بقبول تلقائي\n- **حساب القسط** لأي مبلغ ومدة\n- **مواعيدك القادمة** من التقويم';
+        answer = 'هذي نسخة تجريبية — نَجْد ما يتصل بالذكاء الاصطناعي هنا.\n\nفي المنصة الفعلية يقرأ أرقامك الحقيقية من الصندوق ويجاوبك عليها مباشرة، مثل:\n- **صافي رصيدك** وكم تقدر تطلب قرض بقبول تلقائي\n- **حساب القسط** لأي مبلغ ومدة\n- **مواعيدك القادمة** من التقويم';
       } else {
         const { data, error: e } = await (supabase() as any).functions.invoke('ai-advisor', { body: { message: qn } });
         if (e) { let m = e.message; try { const j = await e.context?.json?.(); if (j?.error) m = j.error; } catch { /* keep */ } throw new Error(m); }
         answer = data.answer;
       }
-    } catch (e: any) { answer = e.message ?? 'تعذر الاتصال بالمستشار'; error = true; }
+    } catch (e: any) { answer = e.message ?? 'تعذر الاتصال بنَجْد'; error = true; }
     setMsgs(m => [...m.slice(0, -1), { role: 'assistant', content: answer, error }]);
     setBusy(false);
   };
@@ -78,15 +78,17 @@ export function AdvisorPage() {
 
   return (
     <>
-      <PageHeader title="المستشار المالي" subtitle={role === 'manager' ? 'اسأل عن السيولة، القروض، المتأخرات، المحفظة والقوائم — يقرأ أرقام الصندوق الفعلية' : 'اسأل عن حسابك وقروضك ومواعيدك — يقرأ أرقامك أنت فقط'}
+      <PageHeader title={<span className="flex items-baseline gap-2">نَجْد <span className="font-sans text-base font-semibold tracking-[0.18em] text-gold-600">NAJD AI</span></span>}
+        subtitle={<><span className="font-medium text-ink">مستشارك المالي</span> — {role === 'manager' ? 'اسأل عن السيولة، القروض، المتأخرات، المحفظة والقوائم من أرقام الصندوق الفعلية' : 'اسأل عن حسابك وقروضك وميزانيتك ومواعيدك — يقرأ أرقامك أنت فقط'}</>}
         actions={msgs.length > 0 ? <button onClick={clear} className="flex items-center gap-1.5 text-xs text-muted hover:text-neg"><Eraser className="size-4" /> مسح المحادثة</button> : undefined} />
-      {!allowed ? <Card><p className="py-6 text-center text-sm text-muted">المستشار المالي غير متاح للأعضاء حالياً.</p></Card> : (
+      {!allowed ? <Card><p className="py-6 text-center text-sm text-muted">نَجْد | NAJD AI غير متاح للأعضاء حالياً.</p></Card> : (
         <Card pad={false} className="flex min-h-[60vh] flex-col overflow-hidden">
           <div className="flex-1 space-y-4 overflow-y-auto p-4 sm:p-5">
             {!msgs.length && <div className="flex flex-col items-center py-8 text-center">
               <span className="shurfa mb-4 flex size-16 items-center justify-center rounded-2xl bg-brand-900 text-gold-300"><Sparkles className="size-7" /></span>
-              <div className="font-display text-lg font-semibold">أهلاً {profile?.full_name?.split(' ')[0]}، وش ودك تعرف؟</div>
-              <p className="mt-1 max-w-md text-sm text-muted">المستشار يقرأ البيانات فقط ولا ينفذ أي عملية. الأرقام من سجلات الصندوق مباشرة.</p>
+              <div className="text-[11px] font-semibold tracking-[0.25em] text-gold-600">NAJD AI</div>
+              <div className="mt-1 font-display text-lg font-semibold">أهلاً {profile?.full_name?.split(' ')[0]}، أنا نَجْد — مستشارك المالي</div>
+              <p className="mt-1 max-w-md text-sm text-muted">وش ودك تعرف؟ أقرأ البيانات فقط ولا أنفذ أي عملية، والأرقام من سجلاتك مباشرة.</p>
               <div className="mt-5 grid w-full max-w-2xl gap-2 sm:grid-cols-2">
                 {SUGGEST[role].map(sg => <button key={sg} onClick={() => ask(sg)} className="rounded-xl border border-line bg-canvas px-3 py-2.5 text-start text-sm hover:border-brand-200 hover:bg-brand-50">{sg}</button>)}
               </div>
@@ -110,7 +112,7 @@ export function AdvisorPage() {
           </form>
         </Card>
       )}
-      <p className="mt-3 text-[11px] text-muted">إجابات المستشار للمساعدة والتوضيح وليست استشارة استثمارية مرخصة. القرارات النهائية لإدارة الصندوق.</p>
+      <p className="mt-3 text-[11px] text-muted">إجابات نَجْد للمساعدة والتوضيح وليست استشارة استثمارية مرخصة. القرارات النهائية لإدارة الصندوق.</p>
     </>
   );
 }
