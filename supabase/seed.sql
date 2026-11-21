@@ -221,7 +221,7 @@ begin
     for k in 0..3 loop
       mo := (date_trunc('month', v_cur) - make_interval(months => k))::date;
       for c in select * from (values
-          ('income','الراتب',14500::numeric,1,'الراتب'),
+          ('income','الراتب',14500::numeric,27,'الراتب'),
           ('expense','سكن وإيجار',3200,1,'إيجار الشقة'),
           ('expense','بقالة وتموين',640 + k*35,4,'بنده'),
           ('expense','بقالة وتموين',410 - k*20,15,'العثيم'),
@@ -241,6 +241,12 @@ begin
     end loop;
     insert into public.pf_budgets select v_u[2], id, b from public.pf_categories, (values ('بقالة وتموين',1200),('مطاعم ومقاهي',500),('مواصلات ووقود',400),('مصروف البيت',1000)) x(n,b)
       where user_id = v_u[2] and kind = 'expense' and name = x.n;
+    insert into public.pf_settings(user_id, payday, notify) values (v_u[2], 27, false);
+    insert into public.pf_recurring(user_id, kind, amount, category_id, title, provider, day_of_month, start_month, is_commitment, end_month, total_amount)
+    values (v_u[2], 'expense', 1450, (select id from public.pf_categories where user_id = v_u[2] and name = 'أخرى' and kind = 'expense'),
+            'تمويل السيارة', 'مصرف الراجحي', 25, (date_trunc('month', v_cur) - interval '3 months')::date, true, (date_trunc('month', v_cur) + interval '30 months')::date, 52200),
+           (v_u[2], 'expense', 380, (select id from public.pf_categories where user_id = v_u[2] and name = 'تسوق وملابس'),
+            'أقساط تمارا — جوال', 'تمارا', 12, (date_trunc('month', v_cur) - interval '1 month')::date, true, (date_trunc('month', v_cur) + interval '2 months')::date, 1520);
     insert into public.pf_goals(user_id, title, target, saved, target_date) values
       (v_u[2], 'سفرة الصيف', 12000, 4500, (date_trunc('year', v_cur) + interval '1 year 6 months')::date),
       (v_u[2], 'دفعة سيارة', 30000, 8000, null);

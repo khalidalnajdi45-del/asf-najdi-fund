@@ -1,7 +1,8 @@
 'use client';
 import clsx from 'clsx';
 import { useMemo, useState } from 'react';
-import { ArrowDownLeft, ArrowUpRight, ChevronLeft, ChevronRight, ClipboardPaste, Flag, Lock, MessageSquareText, Pause, Play, Plus, Repeat, Sparkles, Target, Trash2, Wallet } from 'lucide-react';
+import { ArrowDownLeft, ArrowUpRight, ChevronLeft, ChevronRight, ClipboardPaste, Flag, Landmark, Lock, MessageSquareText, Pause, Play, Plus, Repeat, Settings2, Smartphone, Sparkles, Target, Trash2, TrendingDown, TrendingUp, Wallet } from 'lucide-react';
+import { CommitmentModal, Commitments, Forecast, SettingsModal, ShortcutModal, ZakatCard, ZakatModal, type Ov2 } from './extras';
 import { rpc } from '@/lib/supabase';
 import { useData } from '@/lib/hooks';
 import { useAuth } from '@/lib/auth';
@@ -18,19 +19,21 @@ type Ov = {
   recurring: { id: string; kind: string; amount: string; category_id: string | null; category: string | null; note: string | null; day: number; active: boolean }[];
   goals: { id: string; title: string; target: string; saved: string; target_date: string | null }[];
   fund_due: { contribution: string; installments: string } | null;
-};
+} & Ov2;
 
 const MONTHS = ['يناير', 'فبراير', 'مارس', 'أبريل', 'مايو', 'يونيو', 'يوليو', 'أغسطس', 'سبتمبر', 'أكتوبر', 'نوفمبر', 'ديسمبر'];
 const mLabel = (m: string) => `${MONTHS[Number(m.slice(5, 7)) - 1]} ${m.slice(0, 4)}`;
-const shiftMonth = (m: string, k: number) => { const d = new Date(Date.UTC(Number(m.slice(0, 4)), Number(m.slice(5, 7)) - 1 + k, 1)); return d.toISOString().slice(0, 10); };
-const firstOf = (d: string) => `${d.slice(0, 7)}-01`;
+const shiftMonth = (m: string, k: number) => { const d = new Date(Date.UTC(Number(m.slice(0, 4)), Number(m.slice(5, 7)) - 1 + k, Number(m.slice(8, 10)))); return d.toISOString().slice(0, 10); };
+const dm = (d: string) => `${Number(d.slice(8, 10))} ${MONTHS[Number(d.slice(5, 7)) - 1]}`;
+/** Label a salary cycle by the month it mostly covers. */
+const cycleMonth = (start: string) => { const d = new Date(Date.parse(start) + 15 * 86400000).toISOString(); return mLabel(d); };
 
 export default function MyFinance() {
   const { profile, fund } = useAuth();
   const toast = useToast();
-  const [month, setMonth] = useState(firstOf(today()));
+  const [month, setMonth] = useState(today());
   const d = useData<Ov>(() => rpc<Ov>('pf_overview', { p_month: month }), [month]);
-  const [modal, setModal] = useState<null | 'tx' | 'sms' | 'budget' | 'goal' | 'rec'>(null);
+  const [modal, setModal] = useState<null | 'tx' | 'sms' | 'budget' | 'goal' | 'rec' | 'settings' | 'commit' | 'zakat' | 'shortcut'>(null);
   const [txKind, setTxKind] = useState<'income' | 'expense'>('expense');
   const run = async (fn: () => Promise<unknown>, ok?: string) => {
     try { await fn(); if (ok) toast.ok(ok); d.reload(); } catch (e: any) { toast.err(e.message); }
@@ -41,7 +44,9 @@ export default function MyFinance() {
   const o = d.data;
   const inc = num(o.income), exp = num(o.expense), saved = inc - exp;
   const rate = inc > 0 ? Math.round((saved / inc) * 100) : null;
-  const isCur = month === firstOf(today());
+  const cy = o.cycle, isCur = cy.start <= today() && today() <= cy.end;
+  const calendar = Number(o.settings?.payday ?? 27) === 1;
+  const cycleTitle = calendar ? mLabel(cy.start) : `${cycleMonth(cy.start)} · ${dm(cy.start)} – ${dm(cy.end)}`;
   const fundDue = o.fund_due ? num(o.fund_due.contribution) + num(o.fund_due.installments) : 0;
   const fundCat = o.categories.find(c => c.kind === 'expense' && c.name === 'التزامات الصندوق');
 
@@ -49,6 +54,7 @@ export default function MyFinance() {
     <>
       <PageHeader title="ماليتي" subtitle={<span className="flex items-center gap-1.5"><Lock className="size-3.5" /> دخلك ومصاريفك وميزانيتك وأهدافك — خاصة بك وحدك، لا يراها مدير الصندوق</span>}
         actions={<div className="flex flex-wrap gap-2">
+          <Button variant="secondary" icon={<Settings2 className="size-4" />} onClick={() => setModal('settings')}>الإعدادات</Button>
           <Button variant="secondary" icon={<ClipboardPaste className="size-4" />} onClick={() => setModal('sms')}>الصق رسالة البنك</Button>
           <Button icon={<Plus className="size-4" />} onClick={() => { setTxKind('expense'); setModal('tx'); }}>إضافة عملية</Button>
         </div>} />
@@ -57,9 +63,11 @@ export default function MyFinance() {
       <div className="shurfa relative mb-5 overflow-hidden rounded-2xl bg-brand-900 p-5 text-white sm:p-6">
         <div className="pointer-events-none absolute -left-20 -top-20 size-56 rounded-full bg-gold-500/15 blur-3xl" />
         <div className="relative flex items-center justify-between">
-          <button onClick={() => setMonth(shiftMonth(month, -1))} className="rounded-lg p-1.5 hover:bg-white/10" aria-label="الشهر السابق"><ChevronRight className="size-5" /></button>
-          <button onClick={() => setMonth(firstOf(today()))} className="text-sm font-medium text-brand-100">{mLabel(month)}{!isCur && <span className="ms-2 text-[11px] text-gold-300">العودة للشهر الحالي</span>}</button>
-          <button onClick={() => setMonth(shiftMonth(month, 1))} className="rounded-lg p-1.5 hover:bg-white/10" aria-label="الشهر التالي"><ChevronLeft className="size-5" /></button>
+          <button onClick={() => setMonth(shiftMonth(cy.start, -1))} className="rounded-lg p-1.5 hover:bg-white/10" aria-label="الشهر السابق"><ChevronRight className="size-5" /></button>
+          <button onClick={() => setMonth(today())} className="text-center leading-tight"><span className="block text-sm font-medium text-brand-100">{cycleTitle}</span>
+            {!calendar && <span className="block text-[10px] text-brand-300">دورة الراتب — يوم {o.settings?.payday}</span>}
+            {!isCur && <span className="block text-[11px] text-gold-300">العودة للشهر الحالي</span>}</button>
+          <button onClick={() => setMonth(shiftMonth(cy.start, 1))} className="rounded-lg p-1.5 hover:bg-white/10" aria-label="الشهر التالي"><ChevronLeft className="size-5" /></button>
         </div>
         <div className="relative mt-4 grid grid-cols-3 gap-x-3 gap-y-5 sm:grid-cols-[1fr_1fr_1fr_1.3fr] sm:gap-5">
           <div><div className="text-xs text-brand-200">الدخل</div><div className="mt-1 text-base font-semibold num-cell sm:text-2xl">{sar(inc)}</div></div>
@@ -69,9 +77,11 @@ export default function MyFinance() {
             <div className={clsx('mt-1 text-base font-semibold num-cell sm:text-2xl', saved >= 0 ? 'text-gold-300' : 'text-[#f0b59c]')}>{sar(saved)}</div>
             <div className="mt-1 text-[11px] text-brand-200 sm:text-xs">{rate === null ? 'سجّل دخلك لحساب النسبة' : <>نسبة الادخار <b className="num-cell text-white">{rate}%</b></>}</div>
           </div>
-          <Trend data={o.trend} cur={month} />
+          <Trend data={o.trend} cur={cy.start} />
         </div>
       </div>
+
+      {isCur && <Forecast o={o} />}
 
       {o.fund_due && fundDue > 0 && isCur && <div className="mb-5 flex flex-wrap items-center justify-between gap-3 rounded-xl border border-gold-300 bg-gold-100/50 px-4 py-3 text-sm">
         <span className="flex items-center gap-2"><Wallet className="size-4 text-gold-700" />التزاماتك للصندوق هذا الشهر
@@ -90,12 +100,16 @@ export default function MyFinance() {
       </div>
 
       <div className="mt-4 grid gap-4 lg:grid-cols-5">
-        <Card className="lg:col-span-3" pad={false} title={`عمليات ${mLabel(month)}`} actions={<span className="flex gap-3 text-xs">
+        <Card className="lg:col-span-3" pad={false} title={`عمليات ${calendar ? mLabel(cy.start) : cycleMonth(cy.start)}`} actions={<span className="flex gap-3 text-xs">
           <button onClick={() => { setTxKind('income'); setModal('tx'); }} className="text-brand-600 hover:underline">+ دخل</button>
           <button onClick={() => { setTxKind('expense'); setModal('tx'); }} className="text-brand-600 hover:underline">+ مصروف</button></span>}>
           <TxList rows={o.transactions} onDelete={id => run(() => rpc('pf_delete_tx', { p_id: id }), 'حُذفت')} />
         </Card>
         <div className="space-y-4 lg:col-span-2">
+          <Card title="التزاماتي الشهرية" actions={<button onClick={() => setModal('commit')} className="flex items-center gap-1 text-xs text-brand-600 hover:underline"><Plus className="size-3.5" />التزام</button>}>
+            <Commitments o={o} run={run} />
+          </Card>
+          <ZakatCard o={o} onOpen={() => setModal('zakat')} />
           <Card title="المتكرر شهرياً" actions={<button onClick={() => setModal('rec')} className="flex items-center gap-1 text-xs text-brand-600 hover:underline"><Plus className="size-3.5" />إضافة</button>}>
             <Recurring rows={o.recurring} run={run} />
           </Card>
@@ -111,6 +125,10 @@ export default function MyFinance() {
       <SmsModal open={modal === 'sms'} cats={o.categories} onClose={() => setModal(null)} onSaved={() => { setModal(null); d.reload(); }} />
       <BudgetModal open={modal === 'budget'} ov={o} onClose={() => setModal(null)} onSaved={() => d.reload()} />
       <GoalModal open={modal === 'goal'} onClose={() => setModal(null)} onSaved={() => { setModal(null); d.reload(); }} />
+      <SettingsModal open={modal === 'settings'} o={o} onClose={() => setModal(null)} onSaved={() => d.reload()} onShortcut={() => setModal('shortcut')} />
+      <CommitmentModal open={modal === 'commit'} cats={o.categories} onClose={() => setModal(null)} onSaved={() => { setModal(null); d.reload(); }} />
+      <ZakatModal open={modal === 'zakat'} o={o} onClose={() => setModal(null)} onSaved={() => d.reload()} />
+      <ShortcutModal open={modal === 'shortcut'} o={o} onClose={() => setModal(null)} onSaved={() => d.reload()} />
       <RecModal open={modal === 'rec'} cats={o.categories} onClose={() => setModal(null)} onSaved={() => { setModal(null); d.reload(); }} />
     </>
   );
@@ -122,12 +140,12 @@ function Trend({ data, cur }: { data: Ov['trend']; cur: string }) {
     <div className="col-span-3 sm:col-span-1 sm:border-s sm:border-white/10 sm:ps-5">
       <div className="text-xs text-brand-200">آخر ٦ أشهر</div>
       <div className="mt-2 flex h-16 items-end gap-2">
-        {data.map(x => <div key={x.month} className="flex flex-1 flex-col items-center gap-1" title={`${mLabel(x.month)} — دخل ${sar(x.income)} · مصروف ${sar(x.expense)}`}>
+        {data.map(x => <div key={x.month} className="flex flex-1 flex-col items-center gap-1" title={`${cycleMonth(x.month)} — دخل ${sar(x.income)} · مصروف ${sar(x.expense)}`}>
           <div className="flex h-12 w-full items-end justify-center gap-0.5">
             <span className="w-1/2 max-w-2 rounded-t-sm bg-gold-300" style={{ height: `${(num(x.income) / max) * 100}%` }} />
             <span className="w-1/2 max-w-2 rounded-t-sm bg-[#f0b59c]" style={{ height: `${(num(x.expense) / max) * 100}%` }} />
           </div>
-          <span className={clsx('text-[9px]', x.month.slice(0, 7) === cur.slice(0, 7) ? 'text-white' : 'text-brand-300')}>{MONTHS[Number(x.month.slice(5, 7)) - 1].slice(0, 3)}</span>
+          <span className={clsx('text-[9px]', x.month === cur ? 'text-white' : 'text-brand-300')}>{cycleMonth(x.month).split(' ')[0].slice(0, 3)}</span>
         </div>)}
       </div>
     </div>

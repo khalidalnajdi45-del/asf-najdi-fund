@@ -66,3 +66,48 @@ describe('ماليتي — personal finance', () => {
     expect(n(await s.val(`select count(*) from pf_transactions where source = 'recurring'`))).toBe(1);
   });
 });
+
+describe('ماليتي — phase 2', () => {
+  it('uses the salary cycle, lists commitments and upcoming items', async () => {
+    await s.as(aliUser);
+    await s.q(`select pf_set_settings(27, true)`);
+    const o = await s.val<any>(`select pf_overview($1::date)`, ['2026-11-20']);
+    expect(o.cycle.start).toBe('2026-10-27');
+    expect(o.cycle.end).toBe('2026-11-26');
+    const id = await s.val(`select pf_add_commitment('تمويل السيارة', 1800, 25, null, '2028-06-01'::date, 64800, 'الراجحي')`);
+    const o2 = await s.val<any>(`select pf_overview(null)`);
+    const c = o2.commitments.find((x: any) => x.id === id);
+    expect(c.title).toBe('تمويل السيارة');
+    expect(Number(c.remaining)).toBeGreaterThan(0);
+    expect(o2.recurring.some((x: any) => x.id === id)).toBe(false);
+    await s.q(`select pf_set_settings(1, null)`);
+    const o3 = await s.val<any>(`select pf_overview($1::date)`, ['2026-11-20']);
+    expect(o3.cycle.start).toBe('2026-11-01');
+  });
+
+  it('captures bank messages by key (deduped) and sends opt-in alerts privately', async () => {
+    await s.as(aliUser);
+    const key = await s.val(`select pf_capture_token()`);
+    await s.system();
+    const h = await s.val(`select encode(extensions.digest($1::text, 'sha256'), 'hex')`, [key]);
+    const r1 = await s.val<any>(`select pf_capture($1, 'expense', 45.5, 'مطاعم ومقاهي', null, 'STARBUCKS', 'abc')`, [h]);
+    expect(r1.ok).toBe(true);
+    const r2 = await s.val<any>(`select pf_capture($1, 'expense', 45.5, 'مطاعم ومقاهي', null, 'STARBUCKS', 'abc')`, [h]);
+    expect(r2.duplicate).toBe(true);
+    const bad = await s.val<any>(`select pf_capture('nope', 'expense', 1, null, null, null, 'x')`);
+    expect(bad.ok).toBe(false);
+    expect(Number(await s.val(`select count(*) from notifications where user_id = $1 and type = 'pf_capture'`, [aliUser]))).toBe(1);
+    expect(Number(await s.val(`select count(*) from notification_deliveries d join notifications n on n.id = d.notification_id where n.type like 'pf_%'`))).toBe(0);
+    await s.as(aliUser);
+    await expect(s.q(`select pf_capture($1, 'expense', 1, null, null, null, 'y')`, [h])).rejects.toThrow();
+  });
+
+  it('stores zakat inputs and reminds on the anniversary', async () => {
+    await s.as(aliUser);
+    const t = await s.val(`select fund_today()::text`);
+    await s.q(`select pf_save_zakat('{"cash": 50000}'::jsonb, $1::date)`, [t]);
+    await s.system();
+    expect(await s.val(`select run_pf_daily()`)).toBe(1);
+    expect(await s.val(`select zakat_date > fund_today() from pf_settings where user_id = $1`, [aliUser])).toBe(true);
+  });
+});
