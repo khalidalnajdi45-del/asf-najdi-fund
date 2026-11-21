@@ -1,4 +1,5 @@
 'use client';
+import { setBadge } from '@/lib/push';
 import { go, currentPath } from '@/lib/nav';
 import { useEffect, useState, type ReactNode } from 'react';
 import clsx from 'clsx';
@@ -88,7 +89,7 @@ function useUnread(userId?: string) {
     let alive = true;
     const load = async () => {
       const { count } = await supabase().from('notifications').select('id', { count: 'exact', head: true }).eq('user_id', userId).eq('is_read', false);
-      if (alive) setN(count ?? 0);
+      if (alive) { setN(count ?? 0); setBadge(count ?? 0); }
     };
     load();
     const t = setInterval(load, 60_000);

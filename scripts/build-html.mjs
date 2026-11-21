@@ -6,7 +6,7 @@ import { readFileSync, writeFileSync, mkdirSync } from 'node:fs';
 
 const PROD = process.env.MODE === 'prod';
 const ARTIFACT = process.env.MODE === 'artifact';
-const env = { NEXT_PUBLIC_DEMO: PROD ? '' : '1', NEXT_PUBLIC_SPA: '1', NEXT_PUBLIC_PGLITE_LITE: ARTIFACT ? '1' : '', NEXT_PUBLIC_PGLITE_BASE: process.env.PGLITE_BASE || 'https://cdn.jsdelivr.net/npm/@electric-sql/pglite@0.5.16/dist' };
+const env = { NEXT_PUBLIC_DEMO: PROD ? '' : '1', NEXT_PUBLIC_PUSH: PROD ? '1' : '', NEXT_PUBLIC_SPA: '1', NEXT_PUBLIC_PGLITE_LITE: ARTIFACT ? '1' : '', NEXT_PUBLIC_PGLITE_BASE: process.env.PGLITE_BASE || 'https://cdn.jsdelivr.net/npm/@electric-sql/pglite@0.5.16/dist' };
 execSync('node scripts/prepare-demo.mjs', { stdio: 'inherit' });
 mkdirSync('dist', { recursive: true });
 const r = await build({

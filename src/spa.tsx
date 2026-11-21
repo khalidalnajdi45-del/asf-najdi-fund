@@ -50,6 +50,7 @@ import P29 from '@/app/member/page';
 import P30 from '@/app/admin/page';
 import P31 from '@/app/login/page';
 import P32 from '@/app/page';
+import { registerSW } from '@/lib/push';
 
 const ROUTES: Record<string, ComponentType> = {
   '/admin/loan-applications/': P0,
@@ -120,5 +121,11 @@ function App() {
   if (path.startsWith('/member/')) return <AppShell role="member">{page}</AppShell>;
   return page;
 }
+
+// Push: register the service worker (real site only) and follow taps on notifications
+registerSW();
+navigator.serviceWorker?.addEventListener('message', e => {
+  if (e.data?.type === 'open' && typeof e.data.url === 'string') { const h = e.data.url.split('#')[1]; if (h) location.hash = h; }
+});
 
 createRoot(document.getElementById('root')!).render(<Providers><App /></Providers>);

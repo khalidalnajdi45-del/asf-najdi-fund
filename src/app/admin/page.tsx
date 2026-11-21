@@ -11,6 +11,7 @@ import { useAuth } from '@/lib/auth';
 import { categoryLabel, useSettings } from '@/lib/settings';
 import { GreetingBand } from '@/components/welcome';
 import { NextEventStrip } from '@/components/events';
+import { PushPrompt } from '@/components/push-settings';
 
 export default function ManagerDashboard() {
   const { data: d, error, loading } = useData<any>(() => rpc('manager_dashboard'));
@@ -23,6 +24,7 @@ export default function ManagerDashboard() {
   return (
     <>
       <GreetingBand subtitle="لوحة مدير الصندوق" />
+      <PushPrompt />
       <NextEventStrip href="/admin/events/" />
       <PageHeader title="لوحة التحكم" subtitle={`المركز المالي لـ${fund?.fund_name ?? 'الصندوق'} — بالريال السعودي`}
         actions={s && (s.ok

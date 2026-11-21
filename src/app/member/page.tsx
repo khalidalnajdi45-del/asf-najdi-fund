@@ -12,6 +12,7 @@ import { NotificationList } from '@/components/member-views';
 import { toRoute } from '@/components/account-pages';
 import { GreetingBand } from '@/components/welcome';
 import { NextEventStrip } from '@/components/events';
+import { PushPrompt } from '@/components/push-settings';
 
 export default function MemberDashboard() {
   const { data: d, error, loading } = useData<any>(() => rpc('member_dashboard', { p_member: null }));
@@ -25,6 +26,7 @@ export default function MemberDashboard() {
   return (
     <>
       <GreetingBand subtitle={<span className="num">رقم العضوية {d.member.member_no}</span>} />
+      <PushPrompt />
       <div className="no-print -mt-2 mb-4 flex flex-wrap justify-end gap-2">
         <Button variant="secondary" icon={<Plus className="size-4" />} onClick={() => go('/member/deposits/new/')}>طلب إيداع</Button>
         <Button icon={<HandCoins className="size-4" />} onClick={() => go('/member/loans/new/')}>طلب قرض</Button>

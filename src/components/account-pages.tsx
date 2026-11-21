@@ -10,6 +10,7 @@ import { useAuth } from '@/lib/auth';
 import { getArabicDigits, setArabicDigits } from '@/lib/format';
 import { Button, Card, ErrorBox, Field, Input, KV, Modal, Notice, PageHeader, Tag, Textarea, useToast } from './ui';
 import { NotificationList } from './member-views';
+import { PushCard } from './push-settings';
 
 export function NotificationsPage({ admin }: { admin: boolean }) {
   const { profile } = useAuth();
@@ -110,6 +111,7 @@ export function ProfilePage() {
             <Button onClick={savePw} loading={a.busy} disabled={!pw.p1}>تغيير كلمة المرور</Button>
           </div>
         </Card>
+        <PushCard />
         <MfaCard />
         <Card title="عرض الأرقام">
           <label className="flex items-center gap-3 text-sm">
