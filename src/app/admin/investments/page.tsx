@@ -10,7 +10,13 @@ import { exportXlsx, n2 } from '@/lib/export';
 import { categoryLabel, useSettings } from '@/lib/settings';
 import { statusLabels } from '@/lib/labels';
 import { Badge, Button, Card, DataTable, ErrorBox, Field, Input, isMoney, Modal, MoneyInput, Notice, PageHeader, PL, Select, Stat, Tabs, Textarea } from '@/components/ui';
-import { PerformanceBars, ShareBars } from '@/components/charts';
+import clsx from 'clsx';
+import { Building2, CalendarClock, Landmark, LineChart, PiggyBank } from 'lucide-react';
+import { Band, BandStat, SegBar } from '@/components/admin-viz';
+
+const CAT_COLOR: Record<string, string> = { bank_deposit: '#2f6f7a', equity: '#B8925A', fund: '#7a4f8c', sukuk: '#3f8a6e', real_estate: '#a8654a', other: '#8e6c8a' };
+const CAT_ICON: Record<string, React.ReactNode> = { bank_deposit: <Landmark className="size-4" />, equity: <LineChart className="size-4" />, fund: <PiggyBank className="size-4" />, real_estate: <Building2 className="size-4" /> };
+const catColor = (k: string) => CAT_COLOR[k] ?? '#8e6c8a';
 
 export default function InvestmentsPage() {
   const [tab, setTab] = useState('active');
@@ -21,6 +27,11 @@ export default function InvestmentsPage() {
   const active = rows.filter(r => r.status !== 'exited');
   const sum = (xs: any[], k: string) => xs.reduce((a, r) => a + num(r[k]), 0);
   const list = tab === 'active' ? active : rows.filter(r => r.status === 'exited');
+  const value = sum(active, 'current_value'), cost = sum(active, 'cost_basis'), upl = sum(active, 'unrealized_pl');
+  const byCat = Object.entries(active.reduce((m: Record<string, number>, r) => ({ ...m, [r.category]: (m[r.category] ?? 0) + num(r.current_value) }), {}));
+  const t0 = today();
+  const maturing = active.filter(r => r.maturity_date && r.maturity_date >= t0).sort((a, b) => a.maturity_date.localeCompare(b.maturity_date)).slice(0, 4);
+  const daysTo = (d: string) => Math.max(0, Math.round((Date.parse(d) - Date.parse(t0)) / 86400000));
 
   const exportList = () => exportXlsx('أداء-الاستثمارات', [{
     name: 'الاستثمارات', header: ['الاستثمار', 'الفئة', 'الجهة', 'تاريخ الاستثمار', 'الاستحقاق', 'رأس المال المستثمر', 'التكلفة الحالية', 'القيمة الحالية', 'غير محقق', 'محقق', 'الحالة'],
@@ -34,23 +45,61 @@ export default function InvestmentsPage() {
           <Button variant="secondary" icon={<Download className="size-4" />} onClick={exportList}>Excel</Button>
           <Button icon={<Plus className="size-4" />} onClick={() => setOpen(true)}>استثمار جديد</Button>
         </>} />
-      <div className="mb-4 grid grid-cols-2 gap-3 lg:grid-cols-4">
-        <Stat emphasize label="القيمة الحالية للمحفظة" value={sar(sum(active, 'current_value'))} hint={`${active.length} استثمار قائم`} />
-        <Stat label="رأس المال (التكلفة)" value={sar(sum(active, 'cost_basis'))} />
-        <Stat label="أرباح/خسائر غير محققة" value={sar(sum(active, 'unrealized_pl'), { sign: true })} tone={sum(active, 'unrealized_pl') >= 0 ? 'pos' : 'neg'} />
-        <Stat label="أرباح محققة (منذ البداية)" value={sar(sum(rows, 'realized_pl'), { sign: true })} tone={sum(rows, 'realized_pl') >= 0 ? 'pos' : 'neg'} hint="عوائد + أرباح/خسائر تخارج" />
-      </div>
-      {active.length > 0 && <div className="mb-4 grid gap-4 lg:grid-cols-3">
-        <Card title="التكلفة مقابل القيمة الحالية" className="lg:col-span-2">
-          <PerformanceBars data={active.map(r => ({ name: r.name, cost: num(r.cost_basis), value: num(r.current_value) }))} />
-        </Card>
-        <Card title="التوزيع حسب الفئة">
-          <ShareBars items={Object.entries(active.reduce((m: Record<string, number>, r) => ({ ...m, [r.category]: (m[r.category] ?? 0) + num(r.current_value) }), {}))
-            .map(([k, v]) => ({ label: categoryLabel(s, k), value: v }))} />
-        </Card>
-      </div>}
+      <Band>
+        <div className="grid gap-6 lg:grid-cols-[1.1fr_1fr]">
+          <div className="space-y-5">
+            <div className="grid grid-cols-2 gap-4 sm:grid-cols-3">
+              <div className="col-span-2 sm:col-span-3"><BandStat big label="قيمة المحفظة اليوم" value={sar(value)} tone="gold" sub={`${active.length} استثمار قائم`} /></div>
+              <BandStat label="غير محقق" value={sar(upl, { sign: true })} tone={upl >= 0 ? 'pos' : 'neg'} sub={cost ? `${upl >= 0 ? '+' : ''}${((upl / cost) * 100).toFixed(1)}% على التكلفة` : undefined} />
+              <BandStat label="محقق منذ البداية" value={sar(sum(rows, 'realized_pl'), { sign: true })} tone={sum(rows, 'realized_pl') >= 0 ? 'pos' : 'neg'} sub="عوائد + تخارجات" />
+            </div>
+            {byCat.length > 0 && <div><div className="mb-2 text-xs text-brand-200">توزيع الأصول</div>
+              <SegBar dark height={14} parts={byCat.map(([k, v]) => ({ label: categoryLabel(s, k), value: Number(v), color: catColor(k) === '#2f6f7a' ? '#6fb3bb' : catColor(k) === '#4A2A5A' ? '#9c7bb0' : catColor(k) }))} /></div>}
+          </div>
+          <div className="lg:border-s lg:border-white/10 lg:ps-6">
+            <div className="mb-2 flex items-center gap-1.5 text-xs text-brand-200"><CalendarClock className="size-3.5" />الاستحقاقات القادمة</div>
+            {maturing.length === 0 ? <div className="text-sm text-brand-200">لا توجد استحقاقات قادمة</div> :
+              <ol className="relative space-y-3 border-s border-white/15 ps-4">
+                {maturing.map(r => <li key={r.id} className="relative">
+                  <span className="absolute -start-[21px] top-1.5 size-2.5 rounded-full bg-gold-300 ring-4 ring-brand-900" />
+                  <div className="flex items-baseline justify-between gap-2 text-sm"><span className="truncate">{r.name}</span><span className="shrink-0 font-semibold num-cell">{sar(r.current_value)}</span></div>
+                  <div className="text-[11px] text-brand-200">{date(r.maturity_date)} · بعد <span className="num">{daysTo(r.maturity_date)}</span> يوم</div>
+                </li>)}
+              </ol>}
+          </div>
+        </div>
+      </Band>
       <Tabs value={tab} onChange={setTab} tabs={[{ key: 'active', label: 'القائمة', count: active.length }, { key: 'exited', label: 'منتهية / متخارج منها' }]} />
-      <Card pad={false}>
+      {tab === 'active' ? (active.length === 0 ? <Card><p className="py-8 text-center text-sm text-muted">{d.loading ? 'جاري التحميل…' : 'لا توجد استثمارات قائمة'}</p></Card> :
+        <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-3">
+          {active.map(r => {
+            const c = num(r.cost_basis), v = num(r.current_value), plp = c ? ((v - c) / c) * 100 : 0, col = catColor(r.category);
+            const span = r.maturity_date ? Date.parse(r.maturity_date) - Date.parse(r.investment_date) : 0;
+            const elapsed = span > 0 ? Math.min(100, Math.max(0, ((Date.parse(t0) - Date.parse(r.investment_date)) / span) * 100)) : null;
+            return (
+              <button key={r.id} onClick={() => go(`/admin/investments/view/?id=${r.id}`)} className="group flex flex-col overflow-hidden rounded-2xl border border-line bg-surface text-start transition hover:border-gold-500 hover:shadow-md">
+                <div className="flex items-center gap-2.5 px-4 py-3 text-white" style={{ background: `linear-gradient(120deg, ${col}, ${col}cc)` }}>
+                  <span className="flex size-8 items-center justify-center rounded-lg bg-white/15">{CAT_ICON[r.category] ?? <PiggyBank className="size-4" />}</span>
+                  <span className="min-w-0 flex-1"><span className="block truncate text-sm font-semibold">{r.name}</span><span className="block truncate text-[11px] text-white/75">{categoryLabel(s, r.category)}{r.provider ? ` · ${r.provider}` : ''}</span></span>
+                </div>
+                <div className="w-full space-y-3 p-4">
+                  <div className="flex items-end justify-between gap-2">
+                    <div><div className="text-[11px] text-muted">القيمة الحالية</div><div className="font-display text-2xl font-semibold num-cell">{sar(v)}</div></div>
+                    <span className={clsx('rounded-full px-2.5 py-1 text-xs font-semibold num', plp >= 0 ? 'bg-[#eaf3ec] text-pos' : 'bg-clay/10 text-neg')}>{plp >= 0 ? '▲' : '▼'} {Math.abs(plp).toFixed(1)}%</span>
+                  </div>
+                  <div className="grid grid-cols-3 gap-2 rounded-xl bg-canvas p-2.5 text-center text-[11px]">
+                    <div><div className="text-muted">التكلفة</div><div className="font-medium num-cell">{sar(c)}</div></div>
+                    <div><div className="text-muted">عوائد مستلمة</div><div className="font-medium num-cell">{sar(r.income_received ?? 0)}</div></div>
+                    <div><div className="text-muted">منذ</div><div className="font-medium num-cell">{date(r.investment_date)}</div></div>
+                  </div>
+                  {elapsed !== null && <div>
+                    <div className="mb-1 flex justify-between text-[11px] text-muted"><span>المدة حتى الاستحقاق</span><span className="num-cell">{date(r.maturity_date)}</span></div>
+                    <div className="h-1.5 overflow-hidden rounded-full bg-canvas"><div className="h-full rounded-full" style={{ width: `${elapsed}%`, background: col }} /></div>
+                  </div>}
+                </div>
+              </button>);
+          })}
+        </div>) : <Card pad={false}>
         <DataTable rows={list} loading={d.loading} onRowClick={r => (go(`/admin/investments/view/?id=${r.id}`))} empty="لا توجد استثمارات"
           columns={[
             { key: 'name', header: 'الاستثمار', render: r => <span className="font-medium">{r.name}</span> },
@@ -64,7 +113,7 @@ export default function InvestmentsPage() {
             { key: 'realized_pl', header: 'محقق', align: 'end', render: r => <PL v={r.realized_pl} /> },
             { key: 'status', header: 'الحالة', render: r => <Badge status={r.status} /> },
           ]} />
-      </Card>
+      </Card>}
       <NewInvestment open={open} onClose={() => setOpen(false)} onDone={d.reload} />
     </>
   );

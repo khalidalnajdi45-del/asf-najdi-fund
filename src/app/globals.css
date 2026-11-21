@@ -145,3 +145,7 @@ body { font-family: var(--font-sans); font-feature-settings: "tnum" 1; -webkit-f
    on phones. Let them shrink; wide content scrolls inside its own overflow container instead. */
 .grid > * { min-width: 0; }
 main { overflow-x: clip; }
+
+/* NAJD floating bubble: right side (RTL start), above the mobile bottom bar; clears the desktop sidebar */
+.najd-fab { right: 16px; bottom: calc(80px + env(safe-area-inset-bottom, 0px)); }
+@media (min-width: 1024px) { .najd-fab { right: calc(16rem + 24px); bottom: 24px; } }

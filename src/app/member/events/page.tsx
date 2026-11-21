@@ -1,7 +1,7 @@
 'use client';
 import { useMemo, useState } from 'react';
 import clsx from 'clsx';
-import { Check, HelpCircle, Minus, Plus, X } from 'lucide-react';
+import { CalendarPlus, Check, HelpCircle, Minus, Pencil, Plus, Users, X } from 'lucide-react';
 import { rpc, supabase } from '@/lib/supabase';
 import { q, useData } from '@/lib/hooks';
 import { useAction } from '@/lib/action';
@@ -9,6 +9,7 @@ import { useAuth } from '@/lib/auth';
 import { formatEventDate } from '@/lib/invitation';
 import { Button, Card, Empty, ErrorBox, Input, Loading, PageHeader, Tag } from '@/components/ui';
 import { countdown, InvitationCanvas, isPast, kindLabel, rsvpLabels, ShareBar, toInvitation, type EventRow } from '@/components/events';
+import { blank, EventDetail, EventEditor, type Draft } from '@/components/event-editor';
 
 type Mine = { event_id: string; response: 'yes' | 'no' | 'maybe'; guests: number; note: string | null };
 
@@ -25,16 +26,20 @@ export default function MemberEvents() {
   }, [ev.data]);
   const myMap = useMemo(() => new Map((mine.data ?? []).map(m => [m.event_id, m])), [mine.data]);
   const reload = () => { ev.reload(); mine.reload(); };
+  const [edit, setEdit] = useState<{ id?: string; d: Draft } | null>(null);
+  const [view, setView] = useState<EventRow | null>(null);
+  if (edit) return <EventEditor member init={edit} fundName={fund?.fund_name} onClose={saved => { setEdit(null); if (saved) reload(); }} />;
 
   return (
     <>
-      <PageHeader title="المناسبات" subtitle="دعوات العائلة — أكّد حضورك ليعرف المنظمون العدد" />
+      <PageHeader title="المناسبات" subtitle="دعوات العائلة — أكّد حضورك، أو ادعُ الجميع لمناسبتك"
+        actions={<Button icon={<CalendarPlus className="size-4" />} onClick={() => setEdit({ d: { ...blank('gathering'), notify: true } })}>دعوة جديدة</Button>} />
       <ErrorBox>{ev.error ?? mine.error}</ErrorBox>
       {ev.loading && !ev.data ? <Loading /> : upcoming.length === 0 ? (
-        <Card><Empty>لا توجد مناسبات قادمة حالياً</Empty></Card>
+        <Card><Empty>لا توجد مناسبات قادمة — عندك طلعة أو عزيمة؟ اضغط «دعوة جديدة» وتوصل الدعوة للجميع</Empty></Card>
       ) : (
         <div className="space-y-6">
-          {upcoming.map(e => <Invite key={e.id} e={e} mine={myMap.get(e.id)} fundName={fund?.fund_name} onDone={reload} />)}
+          {upcoming.map(e => <Invite key={e.id} e={e} mine={myMap.get(e.id)} fundName={fund?.fund_name} onDone={reload} onManage={() => setView(e)} />)}
         </div>
       )}
       {past.length > 0 && (
@@ -50,11 +55,13 @@ export default function MemberEvents() {
           </div>
         </>
       )}
+      {view && <EventDetail e={view} fundName={fund?.fund_name} onClose={() => setView(null)} onChanged={() => { setView(null); reload(); }}
+        onEdit={() => { const e = view; setView(null); setEdit({ id: e.id, d: { kind: e.kind, title: e.title, message: e.message ?? '', event_date: e.event_date, start_time: e.start_time ?? '', location: e.location ?? '', location_url: e.location_url ?? '', host: e.host ?? '', rsvp_enabled: e.rsvp_enabled, notify: false } }); }} />}
     </>
   );
 }
 
-function Invite({ e, mine, fundName, onDone }: { e: EventRow; mine?: Mine; fundName?: string | null; onDone: () => void }) {
+function Invite({ e, mine, fundName, onDone, onManage }: { e: EventRow; mine?: Mine; fundName?: string | null; onDone: () => void; onManage: () => void }) {
   const a = useAction();
   const [resp, setResp] = useState<Mine['response'] | null>(mine?.response ?? null);
   const [guests, setGuests] = useState(mine?.guests ?? 0);
@@ -78,6 +85,8 @@ function Invite({ e, mine, fundName, onDone }: { e: EventRow; mine?: Mine; fundN
           <div>
             <div className="flex flex-wrap items-center gap-2">
               <Tag tone="violet">{countdown(e.event_date)}</Tag><span className="text-xs text-muted">{kindLabel(e.kind)}</span>
+              {e.is_mine && <Tag tone="green">دعوتك</Tag>}
+              {!e.is_mine && e.creator_name && <span className="text-xs text-muted">من {e.creator_name}</span>}
               {mine && <Tag tone={mine.response === 'yes' ? 'green' : mine.response === 'maybe' ? 'amber' : 'neutral'}>ردك: {rsvpLabels[mine.response]}</Tag>}
             </div>
             <h2 className="mt-2 font-display text-2xl font-semibold text-ink">{e.title}</h2>
@@ -90,6 +99,13 @@ function Invite({ e, mine, fundName, onDone }: { e: EventRow; mine?: Mine; fundN
             {e.host && <div><dt className="inline text-muted">الداعي: </dt><dd className="inline">{e.host}</dd></div>}
           </dl>
           <ShareBar e={e} fundName={fundName} />
+          {e.is_mine && (
+            <div className="flex flex-wrap items-center gap-3 rounded-xl border border-gold-300 bg-gold-100/40 p-3 text-sm">
+              <span className="flex items-center gap-1.5"><Users className="size-4 text-gold-700" />الحضور المتوقع <b className="num">{e.expected_attendance}</b>
+                <span className="text-xs text-muted">(سأحضر <span className="num">{e.yes_count}</span> · ربما <span className="num">{e.maybe_count}</span> · أعتذر <span className="num">{e.no_count}</span>)</span></span>
+              <Button variant="secondary" className="ms-auto" icon={<Pencil className="size-4" />} onClick={onManage}>الردود والتعديل</Button>
+            </div>
+          )}
           {e.rsvp_enabled && (
             <div className="mt-auto space-y-3 rounded-xl bg-canvas p-4">
               <ErrorBox>{a.error}</ErrorBox>

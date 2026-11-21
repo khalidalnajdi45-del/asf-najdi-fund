@@ -238,8 +238,13 @@ export async function drawInvitation(canvas: HTMLCanvasElement, d: InvitationDat
   t.bg(c); t.art(c, rng(d.kind.length * 7919 + 13));
 
   const font = (w: string, s: number, fam = 'Changa') => `${w} ${s}px ${fam === 'Changa' ? 'Changa' : '"IBM Plex Sans Arabic"'}, "IBM Plex Sans Arabic", sans-serif`;
-  const top = t.panel ? 640 : 610, bottom = H - 120;
-  if (t.panel) { c.fillStyle = t.panel; c.beginPath(); c.roundRect(56, top, W - 112, H - top - 60, 40); c.fill(); }
+  // panel themes (sea / desert): the card ends above the footer, and the brand sits on the scene beneath it
+  const top = t.panel ? 596 : 610, panelBottom = H - 150, bottom = t.panel ? panelBottom - 44 : H - 120;
+  if (t.panel) {
+    c.save(); c.shadowColor = 'rgba(42,23,51,0.25)'; c.shadowBlur = 40; c.shadowOffsetY = 12;
+    c.fillStyle = t.panel; c.beginPath(); c.roundRect(56, top, W - 112, panelBottom - top, 40); c.fill(); c.restore();
+    c.strokeStyle = t.accent; c.globalAlpha = 0.35; c.lineWidth = 2; c.beginPath(); c.roundRect(72, top + 16, W - 144, panelBottom - top - 32, 30); c.stroke(); c.globalAlpha = 1;
+  }
 
   // two passes: measure the text block, then draw it vertically centred in the space above the footer
   const body = (y: number, draw: boolean) => {
@@ -269,15 +274,20 @@ export async function drawInvitation(canvas: HTMLCanvasElement, d: InvitationDat
   const first = top + 80;
   const used = body(first, false) - first;
   body(first + Math.max(0, (bottom - top - 40 - used) / 2), true);
+  const footY = t.panel ? H - 58 : H - 64;
 
   // footer: brand mark + fund name
   try {
-    const img = await loadImg(t.mark === 'gold' ? '/brand/mark-gold.svg' : '/brand/mark-plum.svg');
-    const mw = 62, mh = mw * (img.height / img.width || 0.83);
-    c.font = font('600', 28); const name = d.fund_name || 'صندوق النجدي الادخاري';
-    const tw = c.measureText(name).width; const total = tw + mw + 16; const fx = W / 2 + total / 2;
-    c.textAlign = 'right'; c.fillStyle = t.panel ? NIGHT : t.ink; c.fillText(name, fx, H - 64);
-    c.drawImage(img, fx - tw - 16 - mw, H - 64 - mh + 12, mw, mh);
+    // on panel themes the footer sits on the dark sea/sand under the card → gold mark + ivory name
+    const img = await loadImg(t.mark === 'gold' || t.panel ? '/brand/mark-gold.svg' : '/brand/mark-plum.svg');
+    const mw = t.panel ? 74 : 62, mh = mw * (img.height / img.width || 0.83);
+    c.font = font('600', t.panel ? 32 : 28); const name = d.fund_name || 'صندوق النجدي الادخاري';
+    const tw = c.measureText(name).width; const gap = 18; const total = tw + mw + gap; const fx = W / 2 + total / 2;
+    c.textAlign = 'right'; c.fillStyle = t.panel ? IVORY : t.ink;
+    if (t.panel) { c.save(); c.shadowColor = 'rgba(0,0,0,0.25)'; c.shadowBlur = 8; }
+    c.fillText(name, fx, footY);
+    c.drawImage(img, fx - tw - gap - mw, footY - mh * 0.78, mw, mh);
+    if (t.panel) c.restore();
     c.textAlign = 'center';
   } catch { /* image optional */ }
 

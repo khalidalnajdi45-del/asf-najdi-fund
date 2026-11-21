@@ -25,7 +25,7 @@ const REPORTS: { key: string; label: string; params: ('period' | 'asOf' | 'year'
   { key: 'bs', label: 'الميزانية العمومية', params: ['asOf'] },
   { key: 'cf', label: 'قائمة التدفقات النقدية', params: ['period'] },
   { key: 'liquidity', label: 'تقرير السيولة', params: [] },
-  { key: 'contrib', label: 'تقرير اشتراكات الأعضاء', params: ['year'] },
+  { key: 'contrib', label: 'تقرير الأعضاء الشهري — اشتراكات وقروض وسداد وودائع', params: ['year'] },
   { key: 'deposits', label: 'تقرير ودائع الأعضاء', params: [] },
   { key: 'loans', label: 'محفظة القروض', params: [] },
   { key: 'outstanding', label: 'القروض القائمة', params: [] },
@@ -131,11 +131,31 @@ async function build(key: string, p: Params, s: Settings, fundName: string): Pro
         kpis: [['نسبة تغطية الودائع بالنقد', r.deposit_coverage_ratio === null ? '—' : pct(r.deposit_coverage_ratio)]] };
     }
     case 'contrib': {
-      const r: any[] = await rpc('report_contribution_matrix', { p_year: p.year });
-      return { title: `تقرير اشتراكات الأعضاء — ${p.year}`, subtitle: 'المبالغ المسددة لكل شهر', sections: [{
-        title: 'المصفوفة الشهرية', header: ['العضو', ...Array.from({ length: 12 }, (_, i) => String(i + 1)), 'المسدد', 'المستحق حتى اليوم', 'المتأخر'],
-        money: [13, 14, 15], rows: r.map(m => [m.name, ...Array.from({ length: 12 }, (_, i) => m.months[i + 1] ? `${num(m.months[i + 1].paid)}` : ''), m.total_paid, m.total_due, Math.max(0, num(m.total_due) - num(m.total_paid))]),
-        total: ['الإجمالي', ...Array(12).fill(''), sum(r, 'total_paid'), sum(r, 'total_due'), r.reduce((a, m) => a + Math.max(0, num(m.total_due) - num(m.total_paid)), 0)] }] };
+      const [r, act]: [any[], any[]] = await Promise.all([rpc('report_contribution_matrix', { p_year: p.year }), rpc('report_member_activity', { p_year: p.year })]);
+      const MH = Array.from({ length: 12 }, (_, i) => String(i + 1));
+      const key = (i: number) => `${p.year}-${String(i + 1).padStart(2, '0')}`;
+      const cellOf = (m: any, i: number, f: (x: any) => number) => { const x = m.months?.[key(i)]; const v = x ? f(x) : 0; return v ? v : ''; };
+      const total = (m: any, f: (x: any) => number) => Object.values(m.months ?? {}).reduce((a: number, x: any) => a + f(x), 0);
+      const matrix = (title: string, sheet: string, f: (x: any) => number, only = true): Section => {
+        const rows = act.filter(m => !only || total(m, f) !== 0);
+        return { title, sheet, breakBefore: true, header: ['العضو', ...MH, 'الإجمالي'], money: [13],
+          rows: rows.map(m => [m.name, ...MH.map((_, i) => cellOf(m, i, f)), total(m, f)]),
+          total: ['الإجمالي', ...MH.map((_, i) => act.reduce((a, m) => a + num(cellOf(m, i, f) || 0), 0) || ''), act.reduce((a, m) => a + total(m, f), 0)] };
+      };
+      const fsum = (i: number, k: string) => act.reduce((a, m) => a + num(m.months?.[key(i)]?.[k] ?? 0), 0);
+      const MONTHS = ['يناير', 'فبراير', 'مارس', 'أبريل', 'مايو', 'يونيو', 'يوليو', 'أغسطس', 'سبتمبر', 'أكتوبر', 'نوفمبر', 'ديسمبر'];
+      const K = ['contrib', 'repay', 'loans', 'dep', 'wd'];
+      return { title: `تقرير الأعضاء الشهري — ${p.year}`, subtitle: 'الاشتراكات والقروض والسداد والودائع لكل شهر — من العمليات المسجلة فعلياً', sections: [
+        { title: 'ملخص الصندوق لكل شهر', sheet: 'ملخص شهري', header: ['الشهر', 'اشتراكات', 'سداد قروض', 'قروض مصروفة', 'ودائع', 'سحوبات', 'صافي التدفق'], money: [1, 2, 3, 4, 5, 6],
+          rows: MONTHS.map((mn, i) => [mn, ...K.map(k => fsum(i, k)), fsum(i, 'contrib') + fsum(i, 'repay') + fsum(i, 'dep') - fsum(i, 'loans') - fsum(i, 'wd')]),
+          total: ['الإجمالي', ...K.map(k => MONTHS.reduce((a, _, i) => a + fsum(i, k), 0)), MONTHS.reduce((a, _, i) => a + fsum(i, 'contrib') + fsum(i, 'repay') + fsum(i, 'dep') - fsum(i, 'loans') - fsum(i, 'wd'), 0)] },
+        { title: 'الاشتراكات — المسدد لكل شهر', sheet: 'الاشتراكات', breakBefore: true, header: ['العضو', ...MH, 'المسدد', 'المستحق حتى اليوم', 'المتأخر'],
+          money: [13, 14, 15], rows: r.map(m => [m.name, ...MH.map((_, i) => m.months[i + 1] ? `${num(m.months[i + 1].paid)}` : ''), m.total_paid, m.total_due, Math.max(0, num(m.total_due) - num(m.total_paid))]),
+          total: ['الإجمالي', ...Array(12).fill(''), sum(r, 'total_paid'), sum(r, 'total_due'), r.reduce((a, m) => a + Math.max(0, num(m.total_due) - num(m.total_paid)), 0)] },
+        matrix('سداد القروض لكل شهر', 'سداد القروض', x => num(x.repay)),
+        matrix('القروض المصروفة لكل شهر', 'القروض المصروفة', x => num(x.loans)),
+        matrix('الودائع لكل شهر (إيداع − سحب)', 'الودائع', x => num(x.dep) - num(x.wd)),
+      ] };
     }
     case 'deposits': {
       const r: any[] = await q(sb().from('v_member_balances').select('*').order('member_no'));

@@ -4,7 +4,7 @@ import { IS_DEMO, supabase } from './supabase';
 export type MailResult = { total?: number; sent?: number; failed?: number; no_email?: number; skipped?: string; demo?: boolean };
 
 /** Asks the send-report-emails Edge Function to e-mail reports. The demo has no mail server, so it only simulates. */
-export async function sendReportEmails(body: { period?: string; ids?: string[]; resend?: boolean; message_id?: string; retry?: boolean; credentials?: { member_id: string; username: string; password: string } }): Promise<MailResult & { to?: string }> {
+export async function sendReportEmails(body: { backup?: boolean; period?: string; ids?: string[]; resend?: boolean; message_id?: string; retry?: boolean; credentials?: { member_id: string; username: string; password: string } }): Promise<MailResult & { to?: string }> {
   if (IS_DEMO) { await new Promise(r => setTimeout(r, 700)); return { demo: true }; }
   const { data, error } = await (supabase() as any).functions.invoke('send-report-emails', { body });
   if (error) {

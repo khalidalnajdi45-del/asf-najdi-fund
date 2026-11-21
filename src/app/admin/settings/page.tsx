@@ -8,6 +8,7 @@ import { useSettings, type Settings } from '@/lib/settings';
 import { useAuth } from '@/lib/auth';
 import { dateTime, sar } from '@/lib/format';
 import { useData } from '@/lib/hooks';
+import { sendReportEmails } from '@/lib/report-mail';
 import { Button, Card, ErrorBox, Field, Input, Loading, MoneyInput, Notice, PageHeader, Select, Textarea } from '@/components/ui';
 
 const months = ['يناير', 'فبراير', 'مارس', 'أبريل', 'مايو', 'يونيو', 'يوليو', 'أغسطس', 'سبتمبر', 'أكتوبر', 'نوفمبر', 'ديسمبر'];
@@ -121,6 +122,7 @@ export default function SettingsPage() {
         <InvestmentsViewCard mode={f.member_investments_view} onSaved={s.reload} />
         <LoanAutoCard s={f} onSaved={s.reload} />
         <AiCard enabled={!!f.ai_members_enabled} onSaved={s.reload} />
+        <BackupCard s={f} onSaved={s.reload} />
 
         <Card title="الاعتمادات وتوزيع الأرباح" className="lg:col-span-2">
           <Notice tone="gold">لا يفترض النظام أي توزيع أرباح. سجّل هنا السياسة المعتمدة من الجمعية العمومية عند إقرارها؛ تُحفظ مع سجل تدقيق ويمكن بناء التوزيع عليها لاحقاً.</Notice>
@@ -248,6 +250,28 @@ function AiCard({ enabled, onSaved }: { enabled: boolean; onSaved: () => void })
     <Card title="نَجْد | NAJD AI — مستشارك المالي" subtitle="متاح لك دائماً. فعّله للأعضاء ليسألوا عن حساباتهم — يقرأ بيانات العضو نفسه فقط ولا ينفذ أي عملية.">
       <label className="flex items-center gap-2 text-sm"><input type="checkbox" className="size-4 accent-brand-600" checked={enabled} disabled={a.busy} onChange={e => toggle(e.target.checked)} /> إتاحة نَجْد للأعضاء</label>
       <ErrorBox>{a.error}</ErrorBox>
+    </Card>
+  );
+}
+
+function BackupCard({ s, onSaved }: { s: any; onSaved: () => void }) {
+  const a = useAction();
+  const [email, setEmail] = useState<string>(s.backup_email ?? '');
+  const [on, setOn] = useState<boolean>(s.backup_enabled !== false);
+  const save = async () => { if (await a.run(() => rpc('set_backup_settings', { p_email: email || null, p_enabled: on }).then(() => true), 'تم الحفظ')) onSaved(); };
+  const sendNow = () => a.run(async () => {
+    const r: any = await sendReportEmails({ backup: true });
+    if (r.demo) throw new Error('النسخة التجريبية لا ترسل بريداً — يعمل في المنصة الفعلية');
+    return r;
+  }, 'أُرسلت النسخة الاحتياطية لبريد الصندوق');
+  return (
+    <Card title="النسخة الاحتياطية الشهرية" subtitle="كل أول شهر تُرسل لبريد الصندوق ملفات Excel (CSV): نشاط الأعضاء الشهري (اشتراكات، سداد، قروض، ودائع، سحوبات)، كل عمليات الشهر، الأرصدة والقروض.">
+      <div className="space-y-3">
+        <Field label="بريد الصندوق للنسخة الاحتياطية" hint="اتركه فارغاً لاستخدام بريد الإرسال نفسه"><Input dir="ltr" type="email" value={email} placeholder="fund@example.com" onChange={e => setEmail(e.target.value)} /></Field>
+        <label className="flex items-center gap-2 text-sm"><input type="checkbox" className="size-4 accent-brand-600" checked={on} onChange={e => setOn(e.target.checked)} /> إرسال تلقائي كل أول شهر</label>
+        <div className="flex flex-wrap gap-2"><Button onClick={save} loading={a.busy}>حفظ</Button><Button variant="secondary" onClick={sendNow} loading={a.busy}>أرسل نسخة الشهر الماضي الآن</Button></div>
+        <ErrorBox>{a.error}</ErrorBox>
+      </div>
     </Card>
   );
 }

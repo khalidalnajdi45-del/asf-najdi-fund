@@ -51,9 +51,9 @@ Deno.serve(async req => {
   }
   if (!allowed) return json({ error: 'غير مصرح — هذه العملية لمدير الصندوق فقط' }, 401);
 
-  const body = await req.json().catch(() => ({})) as { period?: string; ids?: string[]; resend?: boolean; test_to?: string; message_id?: string; retry?: boolean; credentials?: { member_id: string; username: string; password: string } };
+  const body = await req.json().catch(() => ({})) as { backup?: boolean; period?: string; ids?: string[]; resend?: boolean; test_to?: string; message_id?: string; retry?: boolean; credentials?: { member_id: string; username: string; password: string } };
   const { data: settings } = await admin.from('fund_settings').select('fund_name, monthly_report_email').eq('id', 1).single();
-  if (byCron && settings && !settings.monthly_report_email) return json({ skipped: 'الإرسال بالبريد متوقف من الإعدادات' });
+  if (byCron && !body.backup && settings && !settings.monthly_report_email) return json({ skipped: 'الإرسال بالبريد متوقف من الإعدادات' });
 
   // ---- provider
   const gmailUser = env('GMAIL_USER'), gmailPass = env('GMAIL_APP_PASSWORD').replace(/\s+/g, ''), resendKey = env('RESEND_API_KEY');
@@ -65,15 +65,18 @@ Deno.serve(async req => {
   const bannerSrc = banner ? `cid:${BANNER_CID}` : null;
   const bannerB64 = banner ? Buffer.from(banner).toString('base64') : '';
   const smtp = !resendKey ? nodemailer.createTransport({ host: 'smtp.gmail.com', port: 465, secure: true, auth: { user: gmailUser, pass: gmailPass } }) : null;
-  const send = async (to: string, m: { subject: string; html: string; text: string }) => {
+  type Extra = { filename: string; content: string; type: string };
+  const send = async (to: string, m: { subject: string; html: string; text: string }, extra: Extra[] = []) => {
     if (smtp) {
       await smtp.sendMail({ from: { name: fundName, address: gmailUser }, to, subject: m.subject, html: m.html, text: m.text,
-        attachments: banner ? [{ filename: 'asf.png', content: Buffer.from(banner), cid: BANNER_CID, contentType: 'image/png' }] : [] });
+        attachments: [...(banner ? [{ filename: 'asf.png', content: Buffer.from(banner), cid: BANNER_CID, contentType: 'image/png' }] : []),
+          ...extra.map(x => ({ filename: x.filename, content: Buffer.from(x.content, 'utf8'), contentType: x.type }))] });
     } else {
       const r = await fetch('https://api.resend.com/emails', {
         method: 'POST', headers: { Authorization: `Bearer ${resendKey}`, 'Content-Type': 'application/json' },
         body: JSON.stringify({ from: env('MAIL_FROM') || `${fundName} <onboarding@resend.dev>`, to: [to], subject: m.subject, html: m.html, text: m.text,
-          attachments: banner ? [{ filename: 'asf.png', content: bannerB64, content_id: BANNER_CID }] : [] }),
+          attachments: [...(banner ? [{ filename: 'asf.png', content: bannerB64, content_id: BANNER_CID }] : []),
+            ...extra.map(x => ({ filename: x.filename, content: Buffer.from(x.content, 'utf8').toString('base64') }))] }),
       });
       if (!r.ok) throw new Error(`Resend ${r.status}: ${(await r.text()).slice(0, 200)}`);
     }
@@ -99,6 +102,44 @@ Deno.serve(async req => {
     } catch (err) {
       return json({ error: String((err as Error)?.message ?? err).slice(0, 300) }, 502);
     }
+  }
+
+  // ---- monthly data backup to the fund's own mailbox (CSV files, UTF-8 with BOM so Excel shows Arabic)
+  if (body.backup) {
+    const { data: b, error: be } = await admin.rpc('backup_payload', { p_period: body.period ?? null });
+    if (be) return json({ error: be.message }, 500);
+    if (byCron && b.settings?.backup_enabled === false) return json({ skipped: 'النسخة الاحتياطية متوقفة من الإعدادات' });
+    const to = b.settings?.backup_email || gmailUser || (env('MAIL_FROM').match(/<([^>]+)>/)?.[1] ?? '');
+    if (!to) return json({ error: 'لا يوجد بريد للصندوق — حدده في الإعدادات ← النسخة الاحتياطية' }, 400);
+    const period = String(b.period).slice(0, 7);
+    const cell = (v: unknown) => { const t = v === null || v === undefined ? '' : String(v); return /[",\n]/.test(t) ? `"${t.replace(/"/g, '""')}"` : t; };
+    const csv = (header: string[], rows: unknown[][]) => '\uFEFF' + [header, ...rows].map(r => r.map(cell).join(',')).join('\r\n');
+    const months: string[] = []; { const y = period.slice(0, 4); for (let i = 1; i <= Number(period.slice(5, 7)); i++) months.push(`${y}-${String(i).padStart(2, '0')}`); }
+    const KINDS: [string, string][] = [['contrib', 'اشتراكات'], ['repay', 'سداد قروض'], ['loans', 'قروض مصروفة'], ['dep', 'ودائع'], ['wd', 'سحوبات']];
+    const act = b.activity_ytd as any[];
+    const actRows: unknown[][] = [];
+    for (const m of act) for (const mon of months) { const x = m.months?.[mon]; if (x) actRows.push([m.member_no, m.name, mon, ...KINDS.map(([k]) => x[k])]); }
+    const tot = (mon: string, k: string) => act.reduce((a, m) => a + Number(m.months?.[mon]?.[k] ?? 0), 0);
+    const fmt = (n: number) => n.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+    const files: Extra[] = [
+      { filename: `نشاط-الأعضاء-الشهري-${period}.csv`, type: 'text/csv', content: csv(['رقم العضو', 'العضو', 'الشهر', ...KINDS.map(k => k[1])], actRows) },
+      { filename: `ملخص-الصندوق-الشهري-${period}.csv`, type: 'text/csv', content: csv(['الشهر', ...KINDS.map(k => k[1])], months.map(mon => [mon, ...KINDS.map(([k]) => tot(mon, k).toFixed(2))])) },
+      { filename: `العمليات-${period}.csv`, type: 'text/csv', content: csv(['رقم العملية', 'التاريخ', 'النوع', 'المبلغ', 'رقم العضو', 'العضو', 'الوصف', 'المرجع', 'معكوسة'],
+          (b.transactions as any[]).map(t => [t.tx_no, t.date, t.type, t.amount, t.member_no, t.member, t.description, t.reference, t.reversed ? 'نعم' : ''])) },
+      { filename: `أرصدة-الأعضاء-${period}.csv`, type: 'text/csv', content: csv(['رقم العضو', 'العضو', 'الاشتراكات المدفوعة', 'متأخر', 'رصيد الودائع', 'القروض القائمة'],
+          (b.balances as any[]).map(x => [x.member_no, x.full_name, x.contributions_total, x.contributions_overdue, x.deposit_balance, x.loan_outstanding])) },
+      { filename: `القروض-${period}.csv`, type: 'text/csv', content: csv(['رقم القرض', 'العضو', 'الحالة', 'المعتمد', 'المسدد', 'المتبقي', 'متأخر', 'تاريخ الصرف', 'القسط القادم'],
+          (b.loans as any[]).map(l => [l.loan_no, l.member, l.status, l.approved, l.repaid, l.outstanding, l.overdue, l.disbursed_on, l.next_due])) },
+    ];
+    const summary = KINDS.map(([k, label]) => `${label}: ${fmt(tot(period, k))} ريال`).join('\n') + `\nعدد العمليات في الشهر: ${(b.transactions as any[]).length}`;
+    try {
+      await send(to, buildMessageEmail({
+        subject: `نسخة احتياطية — ${fundName} — ${period}`,
+        body: `نسخة احتياطية شهرية تلقائية لبيانات الصندوق عن شهر ${period}.\n\nملخص الشهر:\n${summary}\n\nالمرفقات (تفتح في Excel):\n• نشاط الأعضاء الشهري منذ بداية السنة (اشتراكات، سداد قروض، قروض مصروفة، ودائع، سحوبات)\n• ملخص الصندوق لكل شهر\n• كل عمليات الشهر\n• أرصدة الأعضاء وقائمة القروض\n\nاحتفظ بهذه الرسالة — لا تحتاج أي إجراء.`,
+        fields: {}, fund_name: fundName, portal_url: env('PORTAL_URL') || 'https://khalidalnajdi45-del.github.io/asf-najdi-fund/', banner_src: bannerSrc,
+      }), files);
+      return json({ backup: 'sent', to, period, files: files.length });
+    } catch (e) { return json({ error: String((e as Error)?.message ?? e).slice(0, 300) }, 502); }
   }
 
   // ---- test message with sample figures (no member data involved)

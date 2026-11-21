@@ -395,7 +395,7 @@ describe('family events & welcome phrases', () => {
     const ev = await s.val(`select create_event($1::jsonb)`, [JSON.stringify({ kind: 'desert', title: 'كشتة العائلة', event_date: future, start_time: 'العصر', location: 'روضة خريم' })]);
     await s.as(aliUser);
     expect(Number(await s.val(`select count(*) from notifications where type = 'event_invite'`))).toBe(1);
-    await expectFail(s.q(`select create_event('{"kind":"eid","title":"x y","event_date":"2030-01-01"}'::jsonb)`), /مدير الصندوق فقط/);
+    await expectFail(s.q(`select update_event($1, '{"kind":"eid","title":"x y","event_date":"2030-01-01"}'::jsonb)`, [ev]), /لصاحبها أو مدير الصندوق/);  // members invite, but can't edit others' invitations
     await s.q(`select rsvp_event($1, 'yes', 3, 'نجي كلنا')`, [ev]);
     await s.q(`select rsvp_event($1, 'yes', 4)`, [ev]);
     await s.as(saraUser);

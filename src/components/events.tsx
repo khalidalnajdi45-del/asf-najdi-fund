@@ -9,6 +9,7 @@ export type EventRow = {
   id: string; kind: EventKind; title: string; message: string | null; event_date: string; start_time: string | null;
   location: string | null; location_url: string | null; host: string | null; rsvp_enabled: boolean; status: 'active' | 'cancelled';
   created_at: string; yes_count: number; no_count: number; maybe_count: number; guests_count: number; expected_attendance: number;
+  is_mine?: boolean | null; creator_name?: string | null;
 };
 
 export const kindLabel = (k: string) => THEMES[k as EventKind]?.label ?? k;

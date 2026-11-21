@@ -193,9 +193,9 @@ begin
   end loop;
   perform set_config('request.jwt.claim.sub', v_mgr::text, true);
   perform public.create_event(jsonb_build_object('kind','ramadan','title','فطور العائلة السنوي','event_date', date '2027-02-20',
-    'start_time','قبل أذان المغرب','location','بيت العائلة — الحريق','host','عبدالله سعود النجدي'));
+    'start_time','قبل أذان المغرب','location','بيت العائلة','host','عبدالله سعود النجدي'));
   perform public.create_event(jsonb_build_object('kind','eid','title','معايدة عيد الفطر','event_date', date '2027-03-10',
-    'start_time','بعد صلاة العيد','location','بيت العائلة — الحريق'));
+    'start_time','بعد صلاة العيد','location','بيت العائلة'));
 
   -- ---------------- monthly account reports for the last two months
   perform public.issue_monthly_reports((v_cur - interval '2 months')::date, null, false);

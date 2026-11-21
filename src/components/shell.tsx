@@ -13,6 +13,7 @@ import { loginName } from '@/lib/format';
 import { supabase } from '@/lib/supabase';
 import { Loading } from './ui';
 import { WelcomeSplash } from './welcome';
+import { NajdFab } from './advisor';
 
 type NavItem = { href: string; label: string; icon: ReactNode; group?: string };
 
@@ -59,7 +60,7 @@ export const memberNav: NavItem[] = [
 ];
 
 /** Mobile bottom bar: the most used pages one tap away; «المزيد» opens the full menu. */
-const MEMBER_TABS = ['/member/', '/member/contributions/', '/member/loans/', '/member/deposits/'];
+const MEMBER_TABS = ['/member/', '/member/finance/', '/member/loans/', '/member/deposits/'];
 const MANAGER_TABS = ['/admin/', '/admin/members/', '/admin/contributions/', '/admin/loans/'];
 const SHORT: Record<string, string> = { '/admin/': 'الرئيسية', '/admin/contributions/': 'الاشتراكات', '/admin/loans/': 'القروض', '/member/contributions/': 'اشتراكاتي' };
 
@@ -194,6 +195,7 @@ export function AppShell({ role, children }: { role: 'manager' | 'member'; child
       </div>
       <BottomBar items={(role === 'manager' ? MANAGER_TABS : MEMBER_TABS).map(h => nav.find(n => n.href === h)!).filter(Boolean)}
         active={active} onMore={() => setOpen(true)} moreActive={!(role === 'manager' ? MANAGER_TABS : MEMBER_TABS).some(h => active(h))} />
+      <NajdFab hidden={active('/member/advisor/') || active('/admin/advisor/')} />
       <WelcomeSplash />
     </div>
   );
