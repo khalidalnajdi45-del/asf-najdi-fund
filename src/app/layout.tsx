@@ -3,7 +3,7 @@ import './globals.css';
 import { Providers } from '@/components/providers';
 
 export const metadata: Metadata = {
-  title: 'صندوق النجدي الادخاري',
+  title: 'صندوق النجدي',
   description: 'منصة إدارة الصندوق العائلي للادخار والاستثمار',
   robots: { index: false, follow: false },
 };

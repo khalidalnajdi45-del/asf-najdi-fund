@@ -6,7 +6,7 @@ import { sar, date as fmtDate, today } from '@/lib/format';
 import { IS_DEMO, rpc, supabase } from '@/lib/supabase';
 import { q, useData } from '@/lib/hooks';
 import { useAuth } from '@/lib/auth';
-import { Card, PageHeader } from './ui';
+import { Card, PageHeader, useVisualViewport } from './ui';
 
 export type NajdAction = { kind: string; params: Record<string, any>; summary: string; state?: 'busy' | 'done' | 'error' | 'dismissed'; result?: string; href?: string };
 type Msg = { role: 'user' | 'assistant'; content: string; pending?: boolean; error?: boolean; actions?: NajdAction[] };
@@ -84,21 +84,7 @@ function ActionCard({ a, onChange }: { a: NajdAction; onChange: (x: NajdAction) 
   );
 }
 
-/** Tracks the part of the screen the keyboard leaves visible (iOS / Android). */
-function useVisualViewport(active: boolean) {
-  const [vv, setVv] = useState<{ h: number; top: number; kb: boolean } | null>(null);
-  useEffect(() => {
-    if (!active || typeof window === 'undefined') return;
-    const v = window.visualViewport;
-    const f = () => v && setVv({ h: v.height, top: v.offsetTop, kb: window.innerHeight - v.height > 120 });
-    f();
-    v?.addEventListener('resize', f); v?.addEventListener('scroll', f);
-    const html = document.documentElement, prev = [document.body.style.overflow, html.style.overflow];
-    document.body.style.overflow = 'hidden'; html.style.overflow = 'hidden';
-    return () => { v?.removeEventListener('resize', f); v?.removeEventListener('scroll', f); document.body.style.overflow = prev[0]; html.style.overflow = prev[1]; };
-  }, [active]);
-  return vv;
-}
+
 
 const SUGGEST = {
   manager: ['كيف وضع السيولة؟ وهل نقدر نصرف قرض 15 ألف؟', 'مين عليه متأخرات وكم؟ واكتب لي رسالة تذكير لطيفة', 'وش أكبر تركّز في محفظة الأسهم ونسبته؟', 'لخّص لي أداء الصندوق من بداية السنة'],

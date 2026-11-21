@@ -27,7 +27,7 @@ for (const n of ['mark-gold', 'mark-plum', 'mark-micro-gold', 'shurfa-gold', 'sh
 }
 // Installed app (Add to Home Screen): fund icon + full name, no pinch/double-tap zoom.
 const appHead = PROD ? `<meta name="apple-mobile-web-app-capable" content="yes"><meta name="mobile-web-app-capable" content="yes">
-<meta name="apple-mobile-web-app-title" content="صندوق النجدي الادخاري"><meta name="application-name" content="صندوق النجدي الادخاري">
+<meta name="apple-mobile-web-app-title" content="صندوق النجدي"><meta name="application-name" content="صندوق النجدي">
 <meta name="apple-mobile-web-app-status-bar-style" content="default"><meta name="theme-color" content="#F6F1E8">
 <link rel="apple-touch-icon" href="app-icons/apple-touch-icon.png"><link rel="manifest" href="manifest.webmanifest">
 <script>(function(){var s=matchMedia('(display-mode: standalone)').matches||navigator.standalone;if(s)document.documentElement.classList.add('standalone');})();</script>` : '';
@@ -37,7 +37,7 @@ m.content='width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no,v
 ['gesturestart','gesturechange','gestureend'].forEach(function(e){document.addEventListener(e,function(ev){ev.preventDefault()},{passive:false})});
 document.addEventListener('touchmove',function(ev){if(ev.touches&&ev.touches.length>1)ev.preventDefault()},{passive:false});})();</script>`;
 const html = `<!doctype html><html lang="ar" dir="rtl"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no,viewport-fit=cover">${appHead}${noZoom}
-<title>${PROD ? 'صندوق النجدي الادخاري' : 'صندوق النجدي الادخاري — نسخة تجريبية'}</title>
+<title>${PROD ? 'صندوق النجدي' : 'صندوق النجدي الادخاري — نسخة تجريبية'}</title>
 <link rel="icon" href="${dataUri('public/brand/mark-micro-gold.svg')}">
 <link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Changa:wght@500;600;700&family=IBM+Plex+Sans+Arabic:wght@400;500;600;700&display=swap" rel="stylesheet">

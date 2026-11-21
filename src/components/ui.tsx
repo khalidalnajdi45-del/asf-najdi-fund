@@ -160,6 +160,22 @@ export function Notice({ children, tone = 'brand' }: { children: ReactNode; tone
 }
 
 // ---------------------------------------------------------------- modal
+/** The part of the screen the on-screen keyboard leaves visible — keeps sheets above the keyboard on phones. */
+export function useVisualViewport(active: boolean) {
+  const [vv, setVv] = useState<{ h: number; top: number; kb: boolean } | null>(null);
+  useEffect(() => {
+    if (!active || typeof window === 'undefined') return;
+    const v = window.visualViewport;
+    const f = () => v && setVv({ h: v.height, top: v.offsetTop, kb: window.innerHeight - v.height > 120 });
+    f();
+    v?.addEventListener('resize', f); v?.addEventListener('scroll', f);
+    const html = document.documentElement, prev = [document.body.style.overflow, html.style.overflow];
+    document.body.style.overflow = 'hidden'; html.style.overflow = 'hidden';
+    return () => { v?.removeEventListener('resize', f); v?.removeEventListener('scroll', f); document.body.style.overflow = prev[0]; html.style.overflow = prev[1]; };
+  }, [active]);
+  return vv;
+}
+
 export function Modal({ open, onClose, title, children, footer, wide }: {
   open: boolean; onClose: () => void; title: ReactNode; children: ReactNode; footer?: ReactNode; wide?: boolean;
 }) {
@@ -169,15 +185,18 @@ export function Modal({ open, onClose, title, children, footer, wide }: {
     window.addEventListener('keydown', h);
     return () => window.removeEventListener('keydown', h);
   }, [open, onClose]);
+  const vv = useVisualViewport(open);
   if (!open) return null;
   return (
-    <div className="fixed inset-0 z-50 flex items-end justify-center bg-ink/40 p-0 sm:items-center sm:p-4" onMouseDown={e => e.target === e.currentTarget && onClose()}>
-      <div role="dialog" aria-modal className={clsx('flex max-h-[92vh] w-full flex-col rounded-t-2xl bg-surface shadow-xl sm:rounded-2xl', wide ? 'sm:max-w-2xl' : 'sm:max-w-md')}>
+    <div className="fixed inset-x-0 top-0 z-50 flex h-dvh items-end justify-center overscroll-contain bg-ink/40 p-0 sm:items-center sm:p-4"
+      style={vv ? { top: vv.top, height: vv.h } : undefined} onMouseDown={e => e.target === e.currentTarget && onClose()}>
+      <div role="dialog" aria-modal className={clsx('flex max-h-[92%] w-full flex-col rounded-t-2xl bg-surface shadow-xl sm:rounded-2xl', wide ? 'sm:max-w-2xl' : 'sm:max-w-md')}
+        style={{ paddingBottom: vv?.kb ? 0 : 'env(safe-area-inset-bottom, 0px)' }}>
         <header className="flex items-center justify-between border-b border-line px-5 py-4">
           <h3 className="text-base font-semibold">{title}</h3>
           <button onClick={onClose} className="rounded-md p-1 text-muted hover:bg-canvas" aria-label="إغلاق"><X className="size-5" /></button>
         </header>
-        <div className="space-y-4 overflow-y-auto px-5 py-4">{children}</div>
+        <div className="space-y-4 overflow-y-auto overscroll-contain px-5 py-4">{children}</div>
         {footer && <footer className="flex justify-start gap-2 border-t border-line px-5 py-3.5">{footer}</footer>}
       </div>
     </div>

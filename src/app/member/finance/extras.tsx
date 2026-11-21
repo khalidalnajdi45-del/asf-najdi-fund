@@ -1,7 +1,7 @@
 'use client';
 import clsx from 'clsx';
 import { useEffect, useMemo, useState } from 'react';
-import { BellRing, CalendarClock, Check, Copy, KeyRound, Landmark, Pause, Play, Scale, Smartphone, Trash2, TrendingDown, TrendingUp } from 'lucide-react';
+import { BellRing, CalendarClock, Check, Copy, KeyRound, Landmark, Pause, Play, Scale, Smartphone, Trash2, TrendingDown, TrendingUp, HandHeart } from 'lucide-react';
 import { IS_DEMO, rpc } from '@/lib/supabase';
 import { num, sar, today } from '@/lib/format';
 import { Button, Card, Field, Input, Modal, MoneyInput, Select, isMoney, useToast } from '@/components/ui';
@@ -159,10 +159,15 @@ export function ZakatModal({ open, o, onClose, onSaved }: { open: boolean; o: O;
     catch (e: any) { toast.err(e.message); }
   };
   return <Modal open={open} onClose={onClose} title="حاسبة الزكاة" footer={<Button onClick={save}>حفظ</Button>}>
-    <Field label="المبلغ الذي تريد حساب زكاته" hint="مجموع ما حال عليه الحول من مالك"><MoneyInput value={amount} onChange={setAmount} autoFocus /></Field>
+    <Field label="المبلغ الذي تريد حساب زكاته" hint="مجموع ما حال عليه الحول من مالك"><MoneyInput value={amount} onChange={setAmount} autoFocus={typeof window !== 'undefined' && matchMedia('(pointer: fine)').matches} /></Field>
     <div className="rounded-2xl bg-brand-900 p-5 text-center text-white">
       <div className="text-xs text-brand-200">الزكاة (2.5%)</div>
       <div className="mt-1 font-display text-4xl font-semibold text-gold-300 num-cell">{sar(due)}</div>
+      <a href="https://ehsan.sa/" target="_blank" rel="noopener noreferrer"
+        onClick={() => { if (due > 0) navigator.clipboard?.writeText(due.toFixed(2)).then(() => toast.ok('نُسخ مبلغ الزكاة — الصقه في إحسان'), () => null); }}
+        className="mt-4 inline-flex items-center gap-2 rounded-full bg-gold-500 px-4 py-2 text-sm font-semibold text-brand-900 transition hover:bg-gold-300 active:scale-95">
+        <HandHeart className="size-4" />أدِّ زكاتك عبر إحسان</a>
+      {due > 0 && <div className="mt-1.5 text-[11px] text-brand-200">يُنسخ المبلغ تلقائياً لتلصقه هناك</div>}
     </div>
     <Field label="موعد الحول (اختياري)" hint={when ? `يوافق ${hijri(when)} — يذكّرك كل سنة هجرية إذا فعّلت تنبيهات ماليتي` : 'لتذكيرك بموعد زكاتك كل سنة'}>
       <Input type="date" value={when} onChange={e => setWhen(e.target.value)} /></Field>
