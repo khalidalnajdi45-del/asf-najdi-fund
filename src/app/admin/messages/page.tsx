@@ -4,6 +4,7 @@ import clsx from 'clsx';
 import { Bell, CheckSquare, Mail, RotateCcw, Send, Square } from 'lucide-react';
 import { rpc, supabase } from '@/lib/supabase';
 import { q, useData } from '@/lib/hooks';
+import { Band, BandStat, Ring } from '@/components/admin-viz';
 import { dateTime, num, sar, isLoginAlias } from '@/lib/format';
 import { buildMessageEmail, MERGE_FIELDS, mergeText } from '@/lib/report-email';
 import { EMAIL_BANNER_DATA_URI } from '@/lib/email-banner';
@@ -34,6 +35,20 @@ export default function Messages() {
   return (
     <>
       <PageHeader title="مراسلة الأعضاء" subtitle="أرسل بريداً لعضو أو لمجموعة أو للجميع — مع تذكيرات جاهزة بالاشتراك والقروض" />
+      {(() => { const h = hist.data ?? []; const S = (k: string) => h.reduce((a, m) => a + Number(m[k] ?? 0), 0); const sent = S('sent'), rc = S('recipients');
+        const m30 = h.filter(m => Date.now() - Date.parse(m.created_at) < 30 * 86400000).length;
+        return <Band>
+          <div className="grid items-center gap-6 sm:grid-cols-[auto_1fr]">
+            <Ring pct={rc ? (sent / rc) * 100 : 100} size={104} stroke={9} color="#D6BC8C" track="rgba(255,255,255,0.12)">
+              <span className="flex flex-col items-center leading-tight"><span className="text-lg font-semibold num-cell">{rc ? Math.round((sent / rc) * 100) : 0}%</span><span className="text-[10px] text-brand-200">نسبة الوصول</span></span></Ring>
+            <div className="grid grid-cols-2 gap-4 xl:grid-cols-4">
+              <BandStat big label="رسائل مرسلة" value={h.length} tone="gold" sub={`${m30} خلال 30 يوماً`} />
+              <BandStat label="وصلت" value={sent} tone="pos" />
+              <BandStat label="تعذّرت" value={S('failed')} tone={S('failed') ? 'neg' : undefined} />
+              <BandStat label="بدون بريد" value={S('no_email')} sub="أضف بريد العضو من صفحته" />
+            </div>
+          </div>
+        </Band>; })()}
       <Tabs value={tab} onChange={setTab} tabs={[{ key: 'new', label: 'رسالة جديدة' }, { key: 'log', label: 'الرسائل المرسلة', count: hist.data?.length }]} />
       <div className="mt-4">{tab === 'new' ? <Composer onSent={() => { hist.reload(); setTab('log'); }} /> : <History h={hist} />}</div>
     </>

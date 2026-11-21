@@ -10,6 +10,7 @@ import { exportXlsx, n2 } from '@/lib/export';
 import { statusLabels } from '@/lib/labels';
 import { Badge, Button, Card, DataTable, ErrorBox, Input, PageHeader, Stat, Tabs } from '@/components/ui';
 import { ContributionModal } from '@/components/ops';
+import { Avatar, Band, BandStat, Ring } from '@/components/admin-viz';
 
 export default function ContributionsPage() {
   const [tab, setTab] = useState('month');
@@ -56,30 +57,47 @@ export default function ContributionsPage() {
             <label className="text-sm"><span className="mb-1 block text-[13px] text-muted">الشهر</span>
               <Input type="month" value={month} onChange={e => setMonth(e.target.value)} className="w-44" /></label>
           </div>
-          <div className="mb-4 grid grid-cols-2 gap-3 lg:grid-cols-4">
-            <Stat label="المستحق" value={sar(due)} hint={`${plain(rows.length)} عضو`} />
-            <Stat label="المحصّل" value={sar(paid)} tone="brand" />
-            <Stat label="المتبقي" value={sar(due - paid)} tone={due - paid > 0 ? 'neg' : 'neutral'} />
-            <Stat label="نسبة التحصيل" value={pct(due ? paid / due : 0)} hint={`${rows.filter(r => r.status === 'paid').length} مسدد بالكامل`} />
-          </div>
-          <Card pad={false} title={monthLabel(`${month}-01`)}>
-            <DataTable rows={list.data} loading={list.loading} searchable={r => `${r.member_name} ${r.member_no}`} empty="لا توجد مستحقات لهذا الشهر — استخدم «توليد المستحقات»"
-              columns={[
-                { key: 'member_no', header: 'رقم العضو', render: r => <span className="num text-xs text-muted">{r.member_no}</span> },
-                { key: 'member_name', header: 'العضو', render: r => <a className="font-medium hover:text-brand-600" href={`/admin/members/view/?id=${r.member_id}`}>{r.member_name}</a> },
-                { key: 'due_date', header: 'الاستحقاق', render: r => date(r.due_date) },
-                { key: 'amount_due', header: 'المستحق', align: 'end', render: r => sar(r.amount_due) },
-                { key: 'amount_paid', header: 'المسدد', align: 'end', render: r => sar(r.amount_paid) },
-                { key: 'status', header: 'الحالة', render: r => <Badge status={r.status} /> },
-                { key: 'last_paid_on', header: 'تاريخ الدفع', render: r => date(r.last_paid_on) },
-                { key: 'act', header: '', render: r => r.status === 'waived'
-                    ? <Button size="sm" variant="ghost" disabled={wv.busy} onClick={() => waive(r, true)}>إلغاء الإعفاء</Button>
-                    : r.status !== 'paid' && <span className="flex justify-end gap-1.5">
-                        <Button size="sm" variant="secondary" onClick={() => setPay(r)}>تسجيل</Button>
-                        {r.status !== 'partial' && <Button size="sm" variant="ghost" disabled={wv.busy} onClick={() => waive(r, false)} title="لا يُطالب العضو بهذا الشهر ولا يظهر متأخراً">إعفاء</Button>}
-                      </span> },
-              ]} />
-          </Card>
+          <Band>
+            <div className="grid items-center gap-6 lg:grid-cols-[auto_1fr_1fr]">
+              <Ring pct={due ? (paid / due) * 100 : 0} size={128} stroke={11} color="#D6BC8C" track="rgba(255,255,255,0.12)">
+                <span className="flex flex-col items-center leading-tight"><span className="text-2xl font-semibold num-cell">{due ? Math.round((paid / due) * 100) : 0}%</span><span className="text-[10px] text-brand-200">تحصيل {monthLabel(`${month}-01`)}</span></span>
+              </Ring>
+              <div className="grid grid-cols-2 gap-4">
+                <BandStat big label="المحصّل" value={sar(paid)} tone="gold" sub={`من ${sar(due)}`} />
+                <BandStat label="المتبقي" value={sar(due - paid)} tone={due - paid > 0 ? 'neg' : 'pos'} />
+                <BandStat label="مسدد بالكامل" value={`${rows.filter(r => r.status === 'paid').length} / ${rows.length}`} />
+                <BandStat label="معفى" value={rows.filter(r => r.status === 'waived').length} />
+              </div>
+              <div className="lg:border-s lg:border-white/10 lg:ps-6">
+                <div className="mb-2 text-xs text-brand-200">لم يسددوا بعد</div>
+                {rows.filter(r => !['paid', 'waived'].includes(r.status)).length === 0 ? <div className="text-sm text-[#9fd3b4]">الجميع سدد هذا الشهر ✓</div> :
+                  <div className="flex flex-wrap gap-2">{rows.filter(r => !['paid', 'waived'].includes(r.status)).map(r => (
+                    <button key={r.id} onClick={() => setPay(r)} title={`تسجيل دفعة — ${r.member_name}`} className="flex items-center gap-1.5 rounded-full bg-white/10 py-1 pe-3 ps-1 text-xs hover:bg-white/20">
+                      <Avatar name={r.member_name} size={22} />{r.member_name.split(' ')[0]}</button>))}</div>}
+              </div>
+            </div>
+          </Band>
+          {list.loading && !list.data ? null : rows.length === 0 ? <Card><p className="py-8 text-center text-sm text-muted">لا توجد مستحقات لهذا الشهر — استخدم «توليد المستحقات»</p></Card> :
+          <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
+            {[...rows].sort((a, b) => ({ overdue: 0, unpaid: 1, partial: 2, paid: 3, waived: 4 } as any)[a.status] - ({ overdue: 0, unpaid: 1, partial: 2, paid: 3, waived: 4 } as any)[b.status]).map(r => {
+              const p = Number(r.amount_due) ? (Number(r.amount_paid) / Number(r.amount_due)) * 100 : 0;
+              const tone = r.status === 'paid' ? 'border-t-brand-500' : r.status === 'partial' ? 'border-t-gold-500' : r.status === 'overdue' ? 'border-t-clay' : r.status === 'waived' ? 'border-t-line-strong' : 'border-t-line-strong';
+              return (
+                <div key={r.id} className={clsx('flex flex-col gap-2.5 rounded-xl border border-t-4 border-line bg-surface p-3.5', tone)}>
+                  <div className="flex items-center gap-2.5"><Avatar name={r.member_name} size={32} />
+                    <a href={`/admin/members/view/?id=${r.member_id}`} className="min-w-0 flex-1 truncate text-sm font-medium hover:text-brand-600">{r.member_name}</a>
+                    <Badge status={r.status} /></div>
+                  <div className="flex items-baseline justify-between text-sm"><span className="font-semibold num-cell">{sar(r.amount_paid)}</span><span className="text-xs text-muted num-cell">من {sar(r.amount_due)}</span></div>
+                  <div className="h-1.5 overflow-hidden rounded-full bg-canvas"><div className={clsx('h-full rounded-full', r.status === 'paid' ? 'bg-brand-500' : 'bg-gold-500')} style={{ width: `${p}%` }} /></div>
+                  <div className="flex items-center justify-between text-[11px] text-muted"><span>{r.last_paid_on ? `دُفع ${date(r.last_paid_on)}` : `يستحق ${date(r.due_date)}`}</span>
+                    {r.status === 'waived' ? <button className="text-brand-600 hover:underline" disabled={wv.busy} onClick={() => waive(r, true)}>إلغاء الإعفاء</button>
+                      : r.status !== 'paid' && <span className="flex gap-2">
+                        {r.status !== 'partial' && <button className="hover:text-ink" disabled={wv.busy} onClick={() => waive(r, false)}>إعفاء</button>}
+                        <button className="font-medium text-brand-600 hover:underline" onClick={() => setPay(r)}>تسجيل دفعة</button></span>}
+                  </div>
+                </div>);
+            })}
+          </div>}
         </>
       )}
 

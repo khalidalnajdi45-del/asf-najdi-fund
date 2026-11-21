@@ -3,6 +3,7 @@ import { useMemo, useState } from 'react';
 import { Copy, Eye, FileText, Mail, MailCheck, MessageCircle, Send, Settings2 } from 'lucide-react';
 import { rpc, supabase } from '@/lib/supabase';
 import { q, useData } from '@/lib/hooks';
+import { Band } from '@/components/admin-viz';
 import { useAction } from '@/lib/action';
 import { useSettings } from '@/lib/settings';
 import { dateTime, firstOfMonth, monthLabel, num, sar } from '@/lib/format';
@@ -76,12 +77,26 @@ export default function MonthlyReportsAdmin() {
         </div>
       )}
 
-      <div className="mb-4 grid grid-cols-2 gap-3 lg:grid-cols-4">
-        <Stat label="الأعضاء المشمولون" value={rows.length} icon={<FileText className="size-4" />} />
-        <Stat label="وصلهم بالبريد" value={emailed} hint={pendingMail ? `${pendingMail} بانتظار الإرسال` : undefined} icon={<MailCheck className="size-4" />} />
-        <Stat label="اطّلعوا عليه في البوابة" value={read} hint={issued ? `${Math.round((read / issued) * 100)}% من المُصدر` : undefined} tone="pos" />
-        <Stat label="لديهم متأخرات" value={arrears} tone={arrears ? 'neg' : 'neutral'} />
-      </div>
+      <Band>
+        <div className="mb-3 text-xs text-brand-200">رحلة تقرير {monthLabel(period)} — من الإصدار إلى القراءة</div>
+        <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
+          {[
+            { label: 'الأعضاء المشمولون', v: rows.length, of: rows.length, icon: <FileText className="size-4" /> },
+            { label: 'صدر لهم التقرير', v: issued, of: rows.length, icon: <Send className="size-4" /> },
+            { label: 'وصلهم بالبريد', v: emailed, of: rows.length, icon: <MailCheck className="size-4" /> },
+            { label: 'قرأوه في البوابة', v: read, of: rows.length, icon: <FileText className="size-4" /> },
+          ].map((st, i) => <div key={st.label} className="relative rounded-xl bg-white/5 p-3">
+            <div className="flex items-center gap-1.5 text-xs text-brand-200">{st.icon}{st.label}</div>
+            <div className="mt-1 text-2xl font-semibold num-cell">{st.v}</div>
+            <div className="mt-2 h-1.5 overflow-hidden rounded-full bg-white/10"><div className="h-full rounded-full bg-gold-300" style={{ width: `${st.of ? (st.v / st.of) * 100 : 0}%` }} /></div>
+            {i < 3 && <span className="absolute -start-2.5 top-1/2 hidden -translate-y-1/2 text-gold-300 sm:block">‹</span>}
+          </div>)}
+        </div>
+        <div className="mt-3 flex flex-wrap gap-2 text-xs">
+          {pendingMail > 0 && <span className="rounded-full bg-white/10 px-3 py-1">{pendingMail} بانتظار الإرسال بالبريد</span>}
+          <span className={`rounded-full px-3 py-1 ${arrears ? 'bg-[#f0b59c]/20 text-[#f0b59c]' : 'bg-white/10'}`}>لديهم متأخرات: <b className="num">{arrears}</b></span>
+        </div>
+      </Band>
 
       <Card pad={false}>
         <DataTable rows={rows} loading={members.loading || reports.loading} rowKey={r => r.id} searchable={r => `${r.full_name} ${r.member_no}`}

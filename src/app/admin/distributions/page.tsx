@@ -1,6 +1,7 @@
 'use client';
 import { useEffect, useMemo, useState } from 'react';
 import { Gift, Mail, Send } from 'lucide-react';
+import { Band, BandStat } from '@/components/admin-viz';
 import { rpc, supabase } from '@/lib/supabase';
 import { q, useData } from '@/lib/hooks';
 import { useAction } from '@/lib/action';
@@ -34,10 +35,25 @@ export default function DistributionsPage() {
     <>
       <PageHeader title="توزيع الأرباح" subtitle="توزيع الفائض المحقق على الأعضاء — يُضاف لرصيد ودائعهم أو يُصرف نقداً، ويصلهم إشعار وإيميل بحصصهم"
         actions={<Button icon={<Gift className="size-4" />} onClick={() => setOpen(true)} disabled={!(num(avail.data) > 0)}>توزيع جديد</Button>} />
-      <div className="mb-4 grid grid-cols-2 gap-3 lg:grid-cols-3">
-        <Stat label="الفائض المحقق المتاح للتوزيع" value={sar(avail.data ?? 0)} tone="brand" hint="الإيرادات المحققة − المصروفات − ما وُزّع سابقاً (لا يشمل الأرباح غير المحققة)" />
-        <Stat label="إجمالي ما وُزّع" value={sar(total)} hint={`${hist.data?.length ?? 0} عملية توزيع`} />
-      </div>
+      <Band>
+        <div className="grid items-center gap-6 lg:grid-cols-[1.2fr_1fr]">
+          <div className="flex items-center gap-4">
+            <span className="flex size-16 shrink-0 items-center justify-center rounded-2xl bg-gold-500/20 text-gold-300"><Gift className="size-8" /></span>
+            <BandStat big label="الفائض المحقق الجاهز للتوزيع" value={sar(avail.data ?? 0)} tone="gold" sub="الإيرادات المحققة − المصروفات − ما وُزّع سابقاً (بدون الأرباح غير المحققة)" />
+          </div>
+          <div className="grid grid-cols-2 gap-4 lg:border-s lg:border-white/10 lg:ps-6">
+            <BandStat label="إجمالي ما وُزّع" value={sar(total)} tone="pos" />
+            <BandStat label="عمليات التوزيع" value={hist.data?.length ?? 0} sub={hist.data?.[0] ? `آخرها ${date(hist.data[0].dist_date)}` : 'لم يتم توزيع بعد'} />
+          </div>
+        </div>
+        {(hist.data ?? []).length > 0 && <div className="mt-5 flex items-end gap-2 overflow-x-auto border-t border-white/10 pt-4">
+          {[...(hist.data ?? [])].reverse().slice(-12).map(r => { const mx = Math.max(...(hist.data ?? []).map(x => num(x.total))) || 1;
+            return <div key={r.id} className="flex min-w-14 flex-col items-center gap-1" title={r.title}>
+              <span className="text-[10px] text-brand-200 num-cell">{Math.round(num(r.total)).toLocaleString('en-US')}</span>
+              <span className="w-6 rounded-t bg-gold-300" style={{ height: `${12 + (num(r.total) / mx) * 60}px` }} />
+              <span className="text-[9px] text-brand-300 num-cell">{String(r.dist_date).slice(0, 7)}</span></div>; })}
+        </div>}
+      </Band>
       <Card pad={false} title="سجل التوزيعات">
         <DataTable rows={hist.data} loading={hist.loading} empty="لم يتم أي توزيع بعد" onRowClick={setView} columns={[
           { key: 'dist_date', header: 'التاريخ', render: r => date(r.dist_date) },

@@ -3,6 +3,8 @@ import { useState } from 'react';
 import { Download } from 'lucide-react';
 import { supabase } from '@/lib/supabase';
 import { q, useData } from '@/lib/hooks';
+import { ShieldCheck } from 'lucide-react';
+import { Band, BandStat } from '@/components/admin-viz';
 import { dateTime } from '@/lib/format';
 import { auditActionLabels, entityLabels } from '@/lib/labels';
 import { exportXlsx } from '@/lib/export';
@@ -34,6 +36,18 @@ export default function AuditPage() {
     <>
       <PageHeader title="سجل التدقيق" subtitle="سجل غير قابل للتعديل أو الحذف لكل تغيير على البيانات المالية والإعدادات"
         actions={<Button variant="secondary" icon={<Download className="size-4" />} onClick={exportLog}>Excel</Button>} />
+      {(() => { const rows = d.data ?? []; const days = Array.from({ length: 14 }, (_, i) => { const dd = new Date(Date.now() - (13 - i) * 86400000).toISOString().slice(0, 10); return { d: dd, n: rows.filter(r => String(r.occurred_at).slice(0, 10) === dd).length }; });
+        const mx = Math.max(1, ...days.map(x => x.n)); const byActor = Object.entries(rows.reduce<Record<string, number>>((m, r) => ({ ...m, [actor(r.actor_id)]: (m[actor(r.actor_id)] ?? 0) + 1 }), {})).sort((a, b) => b[1] - a[1]).slice(0, 4);
+        return <Band>
+          <div className="grid items-center gap-6 lg:grid-cols-[1fr_1.4fr_1fr]">
+            <div className="flex items-center gap-4"><span className="flex size-14 items-center justify-center rounded-2xl bg-white/10 text-gold-300"><ShieldCheck className="size-7" /></span>
+              <BandStat big label="سجلات محفوظة" value={rows.length.toLocaleString('en-US')} tone="gold" sub="لا تُعدّل ولا تُحذف" /></div>
+            <div className="lg:border-s lg:border-white/10 lg:ps-6"><div className="mb-2 text-xs text-brand-200">النشاط — آخر 14 يوماً</div>
+              <div className="flex h-16 items-end gap-1">{days.map(x => <span key={x.d} title={`${x.d}: ${x.n}`} className="flex-1 rounded-t-sm bg-gold-300" style={{ height: `${Math.max(x.n ? 8 : 2, (x.n / mx) * 100)}%`, opacity: x.n ? 1 : 0.25 }} />)}</div></div>
+            <div className="lg:border-s lg:border-white/10 lg:ps-6"><div className="mb-2 text-xs text-brand-200">الأكثر نشاطاً</div>
+              <ul className="space-y-1.5 text-xs">{byActor.map(([n, c]) => <li key={n} className="flex justify-between gap-2"><span className="truncate">{n}</span><b className="num">{c}</b></li>)}</ul></div>
+          </div>
+        </Band>; })()}
       <div className="mb-4 flex flex-wrap gap-3">
         <Field label="الكيان"><Select value={entity} onChange={e => setEntity(e.target.value)} placeholder="الكل" options={Object.entries(entityLabels).map(([value, label]) => ({ value, label }))} /></Field>
         <Field label="منذ"><Input type="date" value={from} onChange={e => setFrom(e.target.value)} /></Field>

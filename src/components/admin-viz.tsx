@@ -99,3 +99,42 @@ export function lastMonths(n: number, from = new Date()) {
   });
 }
 export const sumBy = <T,>(xs: T[], f: (x: T) => any) => xs.reduce((s, x) => s + num(f(x) ?? 0), 0);
+
+/** One bar per month of a year (Jan → Dec, RTL so Jan sits on the right), for the plum band. */
+export function MonthBars({ values, color = '#D6BC8C', current }: { values: number[]; color?: string; current?: number }) {
+  const max = Math.max(1, ...values);
+  return (
+    <div className="flex h-24 items-end gap-1.5">
+      {values.map((v, i) => <div key={i} className="flex flex-1 flex-col items-center gap-1" title={`${MON[i]}: ${Math.round(v).toLocaleString('en-US')}`}>
+        <div className="flex h-20 w-full items-end justify-center"><span className="w-full max-w-4 rounded-t-sm" style={{ height: `${Math.max(v ? 4 : 0, (v / max) * 100)}%`, background: color, opacity: current !== undefined && i > current ? 0.35 : 1 }} /></div>
+        <span className={clsx('text-[9px]', current === i ? 'font-semibold text-white' : 'text-brand-300')}>{MON[i]}</span>
+      </div>)}
+    </div>
+  );
+}
+
+/** Ledger-style year band for income / expense pages. */
+export function YearBand({ label, total, count, year, rows, color, catColors }: {
+  label: string; total: number; count: number; year: string; rows: { date: string; amount: number; category: string }[]; color: string; catColors?: string[];
+}) {
+  const months = Array.from({ length: 12 }, (_, i) => rows.filter(r => Number(r.date?.slice(5, 7)) === i + 1).reduce((a, r) => a + r.amount, 0));
+  const cats = Object.entries(rows.reduce((m: Record<string, number>, r) => ({ ...m, [r.category]: (m[r.category] ?? 0) + r.amount }), {})).sort((a, b) => b[1] - a[1]);
+  const pal = catColors ?? ['#D6BC8C', '#B8925A', '#9c7bb0', '#6fb3bb', '#e8a07c', '#c9a6d8', '#9fd3b4'];
+  const now = new Date(); const cur = String(now.getFullYear()) === year ? now.getMonth() : undefined;
+  const avg = (cur !== undefined ? cur + 1 : 12) ? total / (cur !== undefined ? cur + 1 : 12) : 0;
+  return (
+    <Band>
+      <div className="grid gap-6 lg:grid-cols-[1fr_1.3fr]">
+        <div className="space-y-5">
+          <div className="grid grid-cols-2 gap-4">
+            <div className="col-span-2"><BandStat big label={`${label} ${year}`} value={`${Math.round(total).toLocaleString('en-US')} ر.س`} tone="gold" sub={`${count} عملية`} /></div>
+            <BandStat label="متوسط شهري" value={`${Math.round(avg).toLocaleString('en-US')} ر.س`} />
+            <BandStat label="أكبر فئة" value={cats[0]?.[0] ?? '—'} sub={cats[0] ? `${Math.round((cats[0][1] / (total || 1)) * 100)}% من الإجمالي` : undefined} />
+          </div>
+          {cats.length > 0 && <SegBar dark parts={cats.slice(0, 6).map(([k, v], i) => ({ label: k, value: v, color: pal[i % pal.length] }))} />}
+        </div>
+        <div className="lg:border-s lg:border-white/10 lg:ps-6"><div className="mb-2 text-xs text-brand-200">حسب الشهر</div><MonthBars values={months} color={color} current={cur} /></div>
+      </div>
+    </Band>
+  );
+}

@@ -142,7 +142,7 @@ export function NajdFab({ hidden }: { hidden?: boolean }) {
         <span className="absolute -bottom-1 rounded-full bg-gold-500 px-1.5 text-[8.5px] font-bold tracking-wider text-brand-900">NAJD</span>
       </button>
       {open && (
-        <div className="no-print fixed inset-0 z-50 flex items-end justify-start sm:items-end sm:p-5 lg:pr-[17rem]">
+        <div className="no-print fixed inset-0 z-50 flex items-end justify-end sm:items-end sm:p-5">
           <div className="absolute inset-0 bg-ink/30 sm:bg-transparent" onClick={() => setOpen(false)} />
           <div className="relative flex h-[85dvh] w-full flex-col overflow-hidden rounded-t-2xl bg-surface shadow-2xl sm:h-[600px] sm:max-h-[85dvh] sm:w-[400px] sm:rounded-2xl"
             style={{ paddingBottom: 'env(safe-area-inset-bottom, 0px)' }}>

@@ -5,6 +5,7 @@ import { CalendarCheck2, Lock, LockOpen, FileText } from 'lucide-react';
 import { go } from '@/lib/nav';
 import { rpc, supabase } from '@/lib/supabase';
 import { q, useData } from '@/lib/hooks';
+import { Band, BandStat } from '@/components/admin-viz';
 import { useAction } from '@/lib/action';
 import { date, dateTime, num, sar, today } from '@/lib/format';
 import { Button, Card, ErrorBox, Field, Modal, Notice, PageHeader, Stat, Textarea } from '@/components/ui';
@@ -49,10 +50,25 @@ export default function PeriodsPage() {
   return (
     <>
       <PageHeader title="الإقفال المالي" subtitle="إقفال الأرباع والسنوات: تُحفظ القوائم كما هي، ويُمنع تسجيل أي عملية بتاريخ داخل الفترة المقفلة" />
-      <div className="mb-4 grid grid-cols-2 gap-3 lg:grid-cols-3">
-        <Stat label="الدفاتر مقفلة حتى" value={locked ? date(locked) : 'لا يوجد إقفال'} tone="brand" icon={<Lock className="size-4" />} />
-        <Stat label="فترات مقفلة" value={closes.filter(c => c.status === 'closed').length} />
-      </div>
+      <Band>
+        <div className="grid items-center gap-6 lg:grid-cols-[1fr_1.4fr]">
+          <div className="flex items-center gap-4">
+            <span className="flex size-16 shrink-0 items-center justify-center rounded-2xl bg-white/10 text-gold-300">{locked ? <Lock className="size-8" /> : <LockOpen className="size-8" />}</span>
+            <BandStat big label="الدفاتر مقفلة حتى" value={locked ? date(locked) : 'لا يوجد إقفال'} tone="gold" sub={`${closes.filter(c => c.status === 'closed').length} فترة مقفلة`} />
+          </div>
+          <div className="lg:border-s lg:border-white/10 lg:ps-6">
+            <div className="mb-2 text-xs text-brand-200">الخط الزمني — <span className="num">{years[0]}</span></div>
+            <div className="flex gap-1.5">
+              {[1, 2, 3, 4].map(k => { const st = qStart(years[0], k), en = qEnd(years[0], k), c = active('quarter', st), cur = st <= t && t <= en;
+                return <div key={k} className="flex-1">
+                  <div className={clsx('h-3 rounded-full', c ? 'bg-gold-300' : en < t ? 'bg-white/30' : cur ? 'bg-gradient-to-l from-white/30 to-white/5' : 'bg-white/10')} />
+                  <div className="mt-1.5 text-center text-[10px] text-brand-200">الربع {QN[k - 1]}{c ? ' 🔒' : cur ? ' · الحالي' : ''}</div></div>; })}
+            </div>
+            <div className="mt-3 text-xs text-brand-200">{(() => { const ready = [1, 2, 3, 4].filter(k => qEnd(years[0], k) < t && !active('quarter', qStart(years[0], k))).length;
+              return ready ? <span className="text-[#f0b59c]">{ready} ربع انتهى ولم يُقفل بعد</span> : 'كل الأرباع المنتهية مقفلة ✓'; })()}</div>
+          </div>
+        </div>
+      </Band>
       <div className="space-y-4">
         {years.map(y => (
           <Card key={y} title={<span className="num">{y}</span>} actions={<Button size="sm" variant="secondary" icon={<FileText className="size-4" />} onClick={() => go(`/admin/reports/?r=fs&year=${y}`)}>القوائم المالية</Button>}>

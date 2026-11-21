@@ -1,13 +1,15 @@
 'use client';
 import { go } from '@/lib/nav';
 import { useState } from 'react';
-import { Download, UserPlus } from 'lucide-react';
+import { Download, LayoutGrid, List, UserPlus, Users } from 'lucide-react';
+import clsx from 'clsx';
+import { Avatar, Band, BandStat, SegBar } from '@/components/admin-viz';
 import { rpc, supabase } from '@/lib/supabase';
 import { q, useData } from '@/lib/hooks';
 import { useAction } from '@/lib/action';
 import { date, sar, today } from '@/lib/format';
 import { exportXlsx, n2 } from '@/lib/export';
-import { Badge, Button, Card, DataTable, ErrorBox, Field, Input, Modal, PageHeader, Textarea } from '@/components/ui';
+import { Badge, Button, Card, DataTable, ErrorBox, Field, Input, Modal, PageHeader, Tag, Textarea } from '@/components/ui';
 import { CredentialsCard, tempPassword as genPassword, USERNAME_RE } from '@/components/member-login';
 
 
@@ -18,6 +20,17 @@ export default function MembersPage() {
     return (bal as any[]).map(b => ({ ...b, username: u.get(b.member_id) ?? null }));
   });
   const [open, setOpen] = useState(false);
+  const [view, setView] = useState<'grid' | 'table'>(() => { try { return (localStorage.getItem('members-view') as any) || 'grid'; } catch { return 'grid'; } });
+  const [qs, setQs] = useState('');
+  const setV = (v: 'grid' | 'table') => { setView(v); try { localStorage.setItem('members-view', v); } catch { /* ignore */ } };
+  const all = data ?? [];
+  const netOf = (m: any) => Number(m.contributions_total) + Number(m.deposit_balance) - Number(m.loan_outstanding);
+  const S = (k: string) => all.reduce((a, m) => a + Number(m[k] ?? 0), 0);
+  const active = all.filter(m => m.status === 'active');
+  const late = all.filter(m => Number(m.contributions_overdue) > 0);
+  const noLogin = all.filter(m => !m.username).length;
+  const shown = all.filter(m => !qs || `${m.full_name} ${m.member_no}`.includes(qs));
+  const maxAbs = Math.max(1, ...all.map(m => Math.max(Number(m.contributions_total) + Number(m.deposit_balance), Number(m.loan_outstanding))));
   const [created, setCreated] = useState<{ name: string; username: string; password: string; memberId: string; email: string | null } | null>(null);
   const a = useAction();
   const blank = () => ({ name: '', username: '', email: '', phone: '', join: today(), password: genPassword(), notes: '' });
@@ -48,8 +61,64 @@ export default function MembersPage() {
         </>} />
       {created && <div className="mb-4"><CredentialsCard {...created} onClose={() => setCreated(null)} /></div>}
       <ErrorBox>{error}</ErrorBox>
-      <Card pad={false}>
-        <DataTable rows={data} loading={loading} searchable={r => `${r.full_name} ${r.member_no}`}
+      <Band>
+        <div className="grid gap-6 lg:grid-cols-[1fr_1.2fr]">
+          <div className="grid grid-cols-2 gap-4">
+            <div className="col-span-2 flex items-center gap-3"><span className="flex size-12 items-center justify-center rounded-2xl bg-white/10 text-gold-300"><Users className="size-6" /></span>
+              <BandStat big label="أسرة الصندوق" value={`${active.length} عضو نشط`} tone="gold" sub={all.length > active.length ? `${all.length - active.length} غير نشط` : undefined} /></div>
+            <BandStat label="صافي أرصدة الأعضاء" value={sar(all.reduce((a, m) => a + netOf(m), 0))} />
+            <BandStat label="عليهم متأخرات" value={late.length} tone={late.length ? 'neg' : 'pos'} sub={late.length ? sar(S('contributions_overdue')) : 'الكل ملتزم ✓'} />
+          </div>
+          <div className="space-y-4 lg:border-s lg:border-white/10 lg:ps-6">
+            <div><div className="mb-2 text-xs text-brand-200">تركيبة ما للأعضاء وما عليهم</div>
+              <SegBar dark parts={[{ label: 'اشتراكات', value: S('contributions_total'), color: '#D6BC8C' }, { label: 'ودائع', value: S('deposit_balance'), color: '#9c7bb0' }, { label: 'قروض قائمة', value: S('loan_outstanding'), color: '#f0b59c' }]} /></div>
+            <div className="flex flex-wrap gap-2 text-xs">
+              <span className="rounded-full bg-white/10 px-3 py-1">لديهم قروض: <b className="num">{all.filter(m => Number(m.loan_outstanding) > 0).length}</b></span>
+              <span className="rounded-full bg-white/10 px-3 py-1">مودعون: <b className="num">{all.filter(m => Number(m.deposit_balance) > 0).length}</b></span>
+              <span className="rounded-full bg-white/10 px-3 py-1">بدون حساب دخول: <b className="num">{noLogin}</b></span>
+            </div>
+          </div>
+        </div>
+      </Band>
+      <div className="mb-3 flex items-center gap-2">
+        <input value={qs} onChange={e => setQs(e.target.value)} placeholder="بحث بالاسم أو الرقم…" className="h-10 min-w-0 flex-1 rounded-xl border border-line bg-surface px-3 text-sm outline-none focus:border-brand-400 sm:max-w-xs" />
+        <div className="ms-auto flex rounded-xl border border-line bg-surface p-1">
+          <button onClick={() => setV('grid')} className={clsx('rounded-lg p-1.5', view === 'grid' ? 'bg-brand-600 text-white' : 'text-muted')} aria-label="بطاقات"><LayoutGrid className="size-4" /></button>
+          <button onClick={() => setV('table')} className={clsx('rounded-lg p-1.5', view === 'table' ? 'bg-brand-600 text-white' : 'text-muted')} aria-label="جدول"><List className="size-4" /></button>
+        </div>
+      </div>
+      {view === 'grid' ? (
+        <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-3">
+          {shown.map(m => { const net = netOf(m), owe = Number(m.contributions_overdue) > 0;
+            return (
+              <button key={m.member_id} onClick={() => go(`/admin/members/view/?id=${m.member_id}`)}
+                className={clsx('flex flex-col gap-3 rounded-2xl border bg-surface p-4 text-start transition hover:border-gold-500 hover:shadow-md', m.status !== 'active' && 'opacity-60', owe ? 'border-clay/40' : 'border-line')}>
+                <div className="flex w-full items-center gap-3"><Avatar name={m.full_name} size={44} />
+                  <div className="min-w-0 flex-1"><div className="truncate font-semibold">{m.full_name}</div>
+                    <div className="text-xs text-muted"><span className="num">{m.member_no}</span>{m.username ? <> · <span dir="ltr" className="num">@{m.username}</span></> : ' · بدون حساب'}</div></div>
+                  {owe ? <Tag tone="red">متأخر</Tag> : <Badge status={m.status} />}
+                </div>
+                <div className="w-full">
+                  <div className="flex items-baseline justify-between"><span className="text-xs text-muted">صافي الرصيد</span>
+                    <span className={clsx('font-display text-xl font-semibold num-cell', net < 0 ? 'text-neg' : 'text-brand-700')}>{sar(net)}</span></div>
+                  <div className="mt-2 space-y-1">
+                    <div className="flex h-1.5 overflow-hidden rounded-full bg-canvas">
+                      <span className="bg-gold-500" style={{ width: `${(Number(m.contributions_total) / maxAbs) * 100}%` }} />
+                      <span className="bg-[#9c7bb0]" style={{ width: `${(Number(m.deposit_balance) / maxAbs) * 100}%` }} /></div>
+                    {Number(m.loan_outstanding) > 0 && <div className="flex h-1.5 overflow-hidden rounded-full bg-canvas"><span className="bg-clay" style={{ width: `${(Number(m.loan_outstanding) / maxAbs) * 100}%` }} /></div>}
+                  </div>
+                </div>
+                <div className="grid w-full grid-cols-3 gap-2 rounded-xl bg-canvas p-2 text-center text-[11px]">
+                  <div><div className="text-muted">اشتراكات</div><div className="font-medium num-cell">{sar(m.contributions_total)}</div></div>
+                  <div><div className="text-muted">ودائع</div><div className="font-medium num-cell">{sar(m.deposit_balance)}</div></div>
+                  <div><div className="text-muted">قروض</div><div className={clsx('font-medium num-cell', Number(m.loan_outstanding) > 0 && 'text-neg')}>{Number(m.loan_outstanding) > 0 ? sar(m.loan_outstanding) : '—'}</div></div>
+                </div>
+                {owe && <div className="w-full text-xs text-neg">متأخرات اشتراك: <span className="num-cell">{sar(m.contributions_overdue)}</span></div>}
+              </button>);
+          })}
+        </div>
+      ) : <Card pad={false}>
+        <DataTable rows={shown} loading={loading} searchable={r => `${r.full_name} ${r.member_no}`}
           onRowClick={r => (go(`/admin/members/view/?id=${r.member_id}`))} rowKey={r => r.member_id}
           columns={[
             { key: 'member_no', header: 'رقم العضو', render: r => <span className="num text-xs text-muted">{r.member_no}</span> },
@@ -64,7 +133,7 @@ export default function MembersPage() {
             { key: 'net', header: 'صافي الرصيد', align: 'end', render: r => { const v = Number(r.contributions_total) + Number(r.deposit_balance) - Number(r.loan_outstanding);
               return <span className={`font-semibold ${v < 0 ? 'text-neg' : 'text-brand-700'}`}>{sar(v)}</span>; } },
           ]} />
-      </Card>
+      </Card>}
 
       <Modal open={open} onClose={() => setOpen(false)} title="إضافة عضو جديد"
         footer={<><Button onClick={submit} loading={a.busy} disabled={f.name.trim().length < 2 || !USERNAME_RE.test(f.username.trim().toLowerCase()) || f.password.length < 8}>إنشاء الحساب</Button>

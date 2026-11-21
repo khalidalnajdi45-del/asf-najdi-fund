@@ -9,7 +9,7 @@ import { exportXlsx, n2 } from '@/lib/export';
 import { useSettings } from '@/lib/settings';
 import { Button, Card, DataTable, ErrorBox, Field, Input, isMoney, Modal, MoneyInput, PageHeader, Select, Stat, Tag } from '@/components/ui';
 import { DocumentUpload, ReverseModal } from '@/components/ops';
-import { ShareBars } from '@/components/charts';
+import { YearBand } from '@/components/admin-viz';
 
 export default function IncomesPage() {
   const sb = supabase();
@@ -45,10 +45,8 @@ export default function IncomesPage() {
           <Button variant="secondary" icon={<Download className="size-4" />} onClick={exportList}>Excel</Button>
           <Button icon={<Plus className="size-4" />} onClick={() => setOpen(true)}>إيراد جديد</Button>
         </>} />
-      <div className="mb-4 grid gap-4 lg:grid-cols-3">
-        <Stat label={`إجمالي إيرادات ${year}`} value={sar(total)} hint={`${live.length} عملية`} tone="brand" />
-        <Card title="حسب الفئة" className="lg:col-span-2">{byCat.length ? <ShareBars items={byCat.map(([k, v]) => ({ label: k, value: v }))} /> : <p className="text-sm text-muted">لا توجد إيرادات</p>}</Card>
-      </div>
+      <YearBand label="إيرادات" year={year} total={total} count={live.length} color="#9fd3b4"
+        rows={live.map(r => ({ date: r.income_date, amount: Number(r.amount), category: r.category }))} />
       <Card pad={false}>
         <DataTable rows={rows} loading={d.loading} searchable={r => `${r.description} ${r.payer ?? ''} ${r.category}`} columns={[
           { key: 'income_date', header: 'التاريخ', render: r => date(r.income_date) },

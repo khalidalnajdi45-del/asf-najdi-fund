@@ -3,6 +3,7 @@ import { Fragment, useState } from 'react';
 import { Download, Plus, Trash2 } from 'lucide-react';
 import { rpc, newKey, supabase } from '@/lib/supabase';
 import { q, useData } from '@/lib/hooks';
+import { Band, BandStat, Ring } from '@/components/admin-viz';
 import { useAction } from '@/lib/action';
 import { date, sar, today } from '@/lib/format';
 import { accountTypeLabels, txTypeLabels } from '@/lib/labels';
@@ -46,13 +47,25 @@ export default function LedgerPage() {
           <Button variant="secondary" icon={<Download className="size-4" />} onClick={exportJournal}>Excel</Button>
           <Button icon={<Plus className="size-4" />} onClick={() => setManual(true)}>قيد يدوي / تصحيحي</Button>
         </>} />
-      {integrity.data && (
-        <div className="mb-4 flex flex-wrap gap-2">
-          {integrity.data.checks.map((c: any) => (
-            <Tag key={c.check} tone={c.ok ? 'green' : 'red'}>{checkLabels[c.check] ?? c.check}: {c.ok ? 'سليم' : `خلل (${c.detail})`}</Tag>
-          ))}
+      <Band>
+        <div className="grid items-center gap-6 lg:grid-cols-[auto_1fr_1.2fr]">
+          {(() => { const ch = integrity.data?.checks ?? []; const ok = ch.filter((c: any) => c.ok).length; const all = ch.length || 1;
+            return <Ring pct={(ok / all) * 100} size={116} stroke={10} color={ok === ch.length ? '#9fd3b4' : '#f0b59c'} track="rgba(255,255,255,0.12)">
+              <span className="flex flex-col items-center leading-tight"><span className="text-xl font-semibold num-cell">{ok}/{ch.length}</span><span className="text-[10px] text-brand-200">فحوص سليمة</span></span></Ring>; })()}
+          <div className="grid grid-cols-2 gap-4">
+            <div className="col-span-2"><BandStat big label="ميزان المراجعة" value={Math.abs(totD - totC) < 0.005 ? 'متوازن ✓' : `فرق ${sar(totD - totC)}`} tone={Math.abs(totD - totC) < 0.005 ? 'pos' : 'neg'} /></div>
+            <BandStat label="إجمالي المدين" value={sar(totD)} />
+            <BandStat label="إجمالي الدائن" value={sar(totC)} />
+          </div>
+          <div className="lg:border-s lg:border-white/10 lg:ps-6">
+            <div className="mb-2 text-xs text-brand-200">فحوص السلامة المحاسبية</div>
+            <ul className="space-y-1.5 text-xs">{(integrity.data?.checks ?? []).map((c: any) => <li key={c.check} className="flex items-center gap-2">
+              <span className={`size-2 rounded-full ${c.ok ? 'bg-[#9fd3b4]' : 'bg-[#f0b59c]'}`} /><span className="flex-1">{checkLabels[c.check] ?? c.check}</span>
+              <span className={c.ok ? 'text-[#9fd3b4]' : 'text-[#f0b59c]'}>{c.ok ? 'سليم' : `خلل (${c.detail})`}</span></li>)}</ul>
+            <div className="mt-3 text-[11px] text-brand-200"><span className="num">{entries.length}</span> قيد في الفترة المختارة</div>
+          </div>
         </div>
-      )}
+      </Band>
       <Tabs value={tab} onChange={setTab} tabs={[{ key: 'journal', label: 'دفتر اليومية' }, { key: 'accounts', label: 'أرصدة الحسابات' }, { key: 'tx', label: 'العمليات المالية' }]} />
       {tab !== 'accounts' && <div className="mb-4 flex flex-wrap gap-3">
         <Field label="من"><Input type="date" value={from} onChange={e => setFrom(e.target.value)} /></Field>
