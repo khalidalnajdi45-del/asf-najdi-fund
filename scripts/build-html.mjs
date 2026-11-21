@@ -30,10 +30,13 @@ const appHead = PROD ? `<meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-title" content="صندوق النجدي الادخاري"><meta name="application-name" content="صندوق النجدي الادخاري">
 <meta name="apple-mobile-web-app-status-bar-style" content="default"><meta name="theme-color" content="#F6F1E8">
 <link rel="apple-touch-icon" href="app-icons/apple-touch-icon.png"><link rel="manifest" href="manifest.webmanifest">
-<script>(function(){var s=matchMedia('(display-mode: standalone)').matches||navigator.standalone;if(!s)return;document.documentElement.classList.add('standalone');
-['gesturestart','gesturechange'].forEach(function(e){document.addEventListener(e,function(ev){ev.preventDefault()},{passive:false})});
-document.addEventListener('touchmove',function(ev){if(ev.touches&&ev.touches.length>1)ev.preventDefault()},{passive:false});})();</script>` : '';
-const html = `<!doctype html><html lang="ar" dir="rtl"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1${PROD ? ',maximum-scale=1,user-scalable=no' : ''}">${appHead}
+<script>(function(){var s=matchMedia('(display-mode: standalone)').matches||navigator.standalone;if(s)document.documentElement.classList.add('standalone');})();</script>` : '';
+// app-like on phones: no pinch / double-tap / focus zoom anywhere (inputs are 16px on phones, see globals.css)
+const noZoom = `<script>(function(){var m=document.querySelector('meta[name=viewport]');if(!m){m=document.createElement('meta');m.name='viewport';document.head.appendChild(m);}
+m.content='width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no,viewport-fit=cover,interactive-widget=resizes-content';
+['gesturestart','gesturechange','gestureend'].forEach(function(e){document.addEventListener(e,function(ev){ev.preventDefault()},{passive:false})});
+document.addEventListener('touchmove',function(ev){if(ev.touches&&ev.touches.length>1)ev.preventDefault()},{passive:false});})();</script>`;
+const html = `<!doctype html><html lang="ar" dir="rtl"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no,viewport-fit=cover">${appHead}${noZoom}
 <title>${PROD ? 'صندوق النجدي الادخاري' : 'صندوق النجدي الادخاري — نسخة تجريبية'}</title>
 <link rel="icon" href="${dataUri('public/brand/mark-micro-gold.svg')}">
 <link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -43,7 +46,7 @@ const out = PROD ? 'dist/index.html' : ARTIFACT ? 'dist/artifact/index.html' : '
 if (ARTIFACT) {
   mkdirSync('dist/artifact', { recursive: true });
   const body = html.replace(/^<!doctype html><html[^>]*><head>/, '').replace('</head><body>', '').replace('</body></html>', '')
-    .replace('<meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">', '');
+    .replace(/<meta charset="utf-8"><meta name="viewport" content="[^"]*">/, '');
   // the artifact host supplies its own <html>, so set RTL + Arabic before anything renders
   writeFileSync(out, `<script>document.documentElement.dir='rtl';document.documentElement.lang='ar'</script>\n` + body);
 } else writeFileSync(out, html);

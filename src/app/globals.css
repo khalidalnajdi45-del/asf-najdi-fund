@@ -88,7 +88,12 @@ body { font-family: var(--font-sans); font-feature-settings: "tnum" 1; -webkit-f
   .fs-cover > .grid { margin-top: 0 !important; }
 }
 .print-only { display: none; }
-.standalone, .standalone body { touch-action: manipulation; overscroll-behavior-y: none; }
+.standalone, .standalone body { overscroll-behavior-y: none; }
+html, body { touch-action: manipulation; -webkit-text-size-adjust: 100%; text-size-adjust: 100%; }
+/* iOS zooms into any field under 16px when it is focused — keep every field at 16px on phones */
+@media (max-width: 767px), (pointer: coarse) {
+  input:not([type=checkbox]):not([type=radio]):not([type=range]), select, textarea { font-size: 16px !important; }
+}
 @media (max-width: 1023px) { .standalone input, .standalone select, .standalone textarea { font-size: 16px !important; } }
 .ticker-track { animation: ticker 40s linear infinite; padding-inline: 1rem; }
 .ticker:hover .ticker-track { animation-play-state: paused; }

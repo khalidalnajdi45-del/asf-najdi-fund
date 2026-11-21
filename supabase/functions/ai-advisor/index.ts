@@ -1,6 +1,8 @@
 // نَجْد | NAJD AI — مستشارك المالي: AI advisor for the fund (Claude API + read-only tools).
 // Every tool runs with the CALLER's own JWT, so Postgres RLS and the RPC role checks decide what it may read:
-// a member only ever sees their own data; the manager sees the fund. The advisor never writes anything.
+// a member only ever sees their own data; the manager sees the fund. The advisor never writes anything itself:
+// it can PROPOSE an action (task, saving goal, loan / deposit / withdrawal request…) which the app shows as a card,
+// and only the user's own tap runs it — with the user's own session.
 // Secrets: ANTHROPIC_API_KEY (required), AI_MODEL (optional).
 import { createClient } from 'npm:@supabase/supabase-js@2.45.4';
 
@@ -64,6 +66,28 @@ const MANAGER_TOOLS: Tool[] = [
   PF_TOOL,
 ];
 
+// ---------------------------------------------------------------- proposed actions (confirmed by the user in the app)
+const ACTIONS_COMMON = ['task', 'goal', 'goal_save', 'pf_tx'];
+const ACTIONS_MEMBER = [...ACTIONS_COMMON, 'loan_request', 'deposit_request', 'withdrawal_request', 'loan_reschedule'];
+const actionTool = (kinds: string[]) => ({
+  name: 'propose_action',
+  description: `يجهّز إجراءً يظهر للمستخدم كبطاقة فيها زر «تأكيد» — لا يُنفّذ شيء إلا إذا ضغط المستخدم تأكيد. استخدمه عندما يطلب المستخدم صراحةً إضافة أو طلب شيء.
+الأنواع وحقولها (params):
+- task: {title, date (YYYY-MM-DD), time? (HH:MM), note?} — مهمة/تذكير في تقويمه
+- goal: {title, target (رقم), date? (موعد الهدف)} — هدف ادخاري في «ماليتي»
+- goal_save: {goal_title, amount} — إضافة مبلغ ادّخره لهدف موجود
+- pf_tx: {kind: income|expense, amount, category? (اسم تصنيف من ماليتي), date?, note?} — تسجيل دخل/مصروف في ماليتي${kinds.includes('loan_request') ? `
+- loan_request: {amount, purpose, mode: installments|lump, months? (عدد الأقساط), start? (لأقساط: أي تاريخ في شهر أول قسط؛ للدفعة الكاملة: تاريخها)} — طلب قرض من الصندوق
+- deposit_request: {amount, method? (تحويل بنكي…), note?} — طلب إيداع في الصندوق
+- withdrawal_request: {amount, reason?} — طلب سحب من ودائعه
+- loan_reschedule: {loan_no, mode: installments|lump, start, count?, note?} — طلب إعادة جدولة قرض قائم (يحتاج موافقة المدير)` : ''}`,
+  input_schema: obj({
+    kind: { type: 'string', enum: kinds },
+    summary: { type: 'string', description: 'سطر واحد يصف الإجراء للمستخدم' },
+    params: { type: 'object' },
+  }, ['kind', 'summary', 'params']),
+});
+
 function system(role: string, name: string, fund: string) {
   return `اسمك «نَجْد» (NAJD AI) — المستشار المالي في منصة ${fund}، وهو صندوق ادخاري عائلي سعودي (الاشتراك الشهري، ودائع اختيارية، قروض حسنة بدون فوائد، واستثمارات منخفضة إلى متوسطة المخاطر في السوق السعودية وودائع بنكية). عرّف بنفسك باسم «نَجْد — مستشارك المالي» إذا سُئلت عن هويتك.
 تتحدث مع ${role === 'manager' ? `مدير الصندوق (${name})` : `العضو ${name}`}. اليوم ${today()} (توقيت الرياض). العملة ريال سعودي.
@@ -71,7 +95,9 @@ function system(role: string, name: string, fund: string) {
 قواعد:
 - أجب بالعربية بلهجة خليجية مهذبة وواضحة، باختصار ومباشرة، واستخدم الأرقام الفعلية من الأدوات — لا تخمّن رقماً؛ إذا احتجت بيانات استدعِ الأداة المناسبة.
 - اعرض المبالغ بصيغة 12,345.67 ريال. اشرح الحسابات خطوة بخطوة عند الحاجة (أقساط، صافي الرصيد، نسب).
-- أنت للقراءة والتحليل فقط: لا تستطيع تسجيل أو تعديل أي عملية؛ إن طُلب ذلك وضّح أين يتم من المنصة.
+- لا تنفّذ أي عملية بنفسك. إذا طلب المستخدم إضافة مهمة أو هدف ادخاري أو تسجيل مصروف${role === 'manager' ? '' : ' أو تقديم طلب قرض/إيداع/سحب/إعادة جدولة'}، استدعِ propose_action بالحقول الصحيحة (تحقق من الأرقام بالأدوات أولاً، مثل قدرته على القرض)، ثم قل له باختصار إنك جهزت الطلب وإنه يضغط «تأكيد» تحته — لا تقل «تم». إذا نقصت معلومة أساسية (المبلغ أو التاريخ) اسأله أولاً.${role === 'manager' ? '
+- عمليات الصندوق نفسها (تسجيل اشتراك، صرف قرض، اعتماد…) تتم من صفحات المنصة — وضّح أين.' : '
+- طلبات القرض والإيداع والسحب وإعادة الجدولة تذهب لمدير الصندوق للموافقة. القسط يوم 28 من كل شهر، ومجموع أقساط العضو الشهرية لا يتجاوز 800 ريال (تزيد المدة تلقائياً).'}
 - لا تقدم توصيات شراء/بيع لسهم بعينه كاستشارة استثمارية مرخصة؛ يمكنك التحليل والشرح (التركّز، المخاطر، الأداء) مع التنبيه بأن القرار للإدارة.
 ${role === 'manager' ? '- يمكنك صياغة رسائل تذكير للأعضاء بلطف، وتحليل السيولة قبل اعتماد القروض، وتلخيص الأداء.' : '- لا تكشف أي بيانات لأعضاء آخرين؛ الأدوات تعطيك بيانات هذا العضو فقط وأرقام الصندوق العامة.'}
 - صافي رصيد العضو = اشتراكاته المدفوعة + رصيد ودائعه − قروضه القائمة. القرض يُعتمد تلقائياً إذا بقي الصافي موجباً بعد القرض وبقيت سيولة الصندوق فوق الاحتياطي؛ وإلا يراجعه المدير. الصرف دائماً يدوي من المدير.
@@ -106,6 +132,8 @@ Deno.serve(async req => {
   // caller-scoped client: RLS + RPC role checks apply to every tool
   const sb = createClient(env('SUPABASE_URL'), env('SUPABASE_ANON_KEY'), { global: { headers: { Authorization: `Bearer ${jwt}` } }, auth: { persistSession: false } });
   const tools = au.role === 'manager' ? MANAGER_TOOLS : MEMBER_TOOLS;
+  const kinds = au.role === 'manager' ? ACTIONS_COMMON : ACTIONS_MEMBER;
+  const actions: { kind: string; summary: string; params: Record<string, unknown> }[] = [];
 
   const { data: hist } = await admin.from('ai_messages').select('role, content').eq('user_id', u.user.id).order('created_at', { ascending: false }).limit(16);
   const messages: any[] = (hist ?? []).reverse().map((m: any) => ({ role: m.role, content: m.content }));
@@ -119,7 +147,7 @@ Deno.serve(async req => {
         method: 'POST',
         headers: { 'x-api-key': key, 'anthropic-version': '2023-06-01', 'content-type': 'application/json' },
         body: JSON.stringify({ model: MODEL, max_tokens: 1500, system: system(au.role, au.full_name, st?.fund_name ?? 'الصندوق'),
-          tools: tools.map(({ name, description, input_schema }) => ({ name, description, input_schema })), messages }),
+          tools: [...tools.map(({ name, description, input_schema }) => ({ name, description, input_schema })), actionTool(kinds)], messages }),
       });
       if (!r.ok) throw new Error(`Claude ${r.status}: ${(await r.text()).slice(0, 300)}`);
       const res = await r.json();
@@ -132,7 +160,15 @@ Deno.serve(async req => {
       for (const c of calls) {
         const t = tools.find(x => x.name === c.name);
         let out: unknown;
-        try { out = t ? await t.run(sb, c.input ?? {}) : { error: 'أداة غير معروفة' }; } catch (e) { out = { error: String((e as Error).message ?? e) }; }
+        if (c.name === 'propose_action') {
+          const a = c.input ?? {};
+          if (kinds.includes(a.kind) && actions.length < 5) {
+            actions.push({ kind: a.kind, summary: String(a.summary ?? '').slice(0, 200), params: typeof a.params === 'object' && a.params ? a.params : {} });
+            out = { ok: true, note: 'ظهرت للمستخدم بطاقة بزر «تأكيد» — لم يُنفّذ شيء بعد.' };
+          } else out = { error: 'نوع إجراء غير متاح لهذا المستخدم' };
+        } else {
+          try { out = t ? await t.run(sb, c.input ?? {}) : { error: 'أداة غير معروفة' }; } catch (e) { out = { error: String((e as Error).message ?? e) }; }
+        }
         results.push({ type: 'tool_result', tool_use_id: c.id, content: JSON.stringify(out).slice(0, 60000) });
       }
       messages.push({ role: 'user', content: results });
@@ -146,5 +182,5 @@ Deno.serve(async req => {
     { user_id: u.user.id, role: 'user', content: message, created_at: new Date(t0).toISOString() },
     { user_id: u.user.id, role: 'assistant', content: answer, tokens, created_at: new Date(t0 + 5).toISOString() },
   ]);
-  return json({ answer });
+  return json({ answer, actions });
 });
