@@ -48,8 +48,8 @@ describe('loan scheduling', () => {
     expect(rows.every((r: any) => r.d.endsWith('-28'))).toBe(true);
     expect(rows[0].d).toBe(l.ps);
     expect(rows.reduce((a: number, r: any) => a + n(r.a), 0)).toBe(1250);
-    expect(n(rows[0].a)).toBe(104);                                   // whole riyals, last takes the remainder
-    expect(n(rows[11].a)).toBe(106);
+    expect(n(rows[0].a)).toBe(105);                                   // whole riyals rounded up, last is the remainder
+    expect(n(rows[11].a)).toBe(95);
   });
 
   it('minimum installment of 100 reduces the number of installments', async () => {
