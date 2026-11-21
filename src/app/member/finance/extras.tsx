@@ -131,17 +131,8 @@ export function CommitmentModal({ open, cats, onClose, onSaved }: { open: boolea
   </Modal>;
 }
 
-// ------------------------------------------------------------------ zakat
-type Z = { cash: string; fund: string; include_fund: boolean; g24: string; g21: string; g18: string; gold_price: string; silver_g: string; silver_price: string; invest: string; receivables: string; debts: string; result?: number; due?: number; at?: string };
-const zBlank = (o: O): Z => ({ cash: '', fund: o.fund_balance ? String(Math.round(num(o.fund_balance))) : '', include_fund: true, g24: '', g21: '', g18: '', gold_price: '', silver_g: '', silver_price: '', invest: '', receivables: '', debts: '' });
-function zCalc(z: Z) {
-  const n = (v: string) => num(v || 0), p = n(z.gold_price);
-  const gold = n(z.g24) * p + n(z.g21) * p * (21 / 24) + n(z.g18) * p * (18 / 24);
-  const silver = n(z.silver_g) * n(z.silver_price);
-  const total = n(z.cash) + (z.include_fund ? n(z.fund) : 0) + gold + silver + n(z.invest) + n(z.receivables) - n(z.debts);
-  const nisab = 85 * p;
-  return { gold, silver, total, nisab, due: p > 0 && total >= nisab ? total * 0.025 : 0, ready: p > 0 };
-}
+// ------------------------------------------------------------------ zakat (the member enters the amount; 2.5%)
+type Z = { amount: string; due?: number; at?: string };
 
 export function ZakatCard({ o, onOpen }: { o: O; onOpen: () => void }) {
   const z = o.settings?.zakat as Partial<Z> | undefined, when = o.settings?.zakat_date;
@@ -150,7 +141,7 @@ export function ZakatCard({ o, onOpen }: { o: O; onOpen: () => void }) {
       <div className="flex items-center gap-3">
         <span className="flex size-10 items-center justify-center rounded-xl bg-gold-500 text-white"><Scale className="size-5" /></span>
         <span className="min-w-0 flex-1"><span className="block font-semibold">حاسبة الزكاة</span>
-          <span className="block text-xs text-muted">{when ? `موعد زكاتك ${hijri(when)} (${dm(when)})` : 'احسب زكاة مالك وحدد موعد الحول'}</span></span>
+          <span className="block text-xs text-muted">{when ? `موعد زكاتك ${hijri(when)} (${dm(when)})` : 'أدخل المبلغ واعرف زكاته'}</span></span>
         {z?.due !== undefined && <span className="text-end"><span className="block text-[10px] text-muted">آخر حساب</span><span className="font-semibold text-gold-700 num-cell">{sar(z.due)}</span></span>}
       </div>
     </button>
@@ -159,55 +150,22 @@ export function ZakatCard({ o, onOpen }: { o: O; onOpen: () => void }) {
 
 export function ZakatModal({ open, o, onClose, onSaved }: { open: boolean; o: O; onClose: () => void; onSaved: () => void }) {
   const toast = useToast();
-  const [z, setZ] = useState<Z>(() => ({ ...zBlank(o), ...(o.settings?.zakat ?? {}) }));
-  const [when, setWhen] = useState(o.settings?.zakat_date ?? '');
-  useEffect(() => { if (open) { setZ({ ...zBlank(o), ...(o.settings?.zakat ?? {}) }); setWhen(o.settings?.zakat_date ?? ''); } }, [open]); // eslint-disable-line
-  const c = useMemo(() => zCalc(z), [z]);
-  const F = (k: keyof Z, label: string, hint?: string) => <Field label={label} hint={hint}><MoneyInput value={String(z[k] ?? '')} onChange={v => setZ({ ...z, [k]: v })} /></Field>;
-  const G = (k: keyof Z, label: string) => <Field label={label}><Input inputMode="decimal" className="num-cell" value={String(z[k] ?? '')} onChange={e => setZ({ ...z, [k]: e.target.value.replace(/[^\d.]/g, '') })} placeholder="جرام" /></Field>;
+  const [amount, setAmount] = useState('');
+  const [when, setWhen] = useState('');
+  useEffect(() => { if (open) { setAmount(String(o.settings?.zakat?.amount ?? '')); setWhen(o.settings?.zakat_date ?? ''); } }, [open]); // eslint-disable-line
+  const due = num(amount || 0) * 0.025;
   const save = async () => {
-    try { await rpc('pf_save_zakat', { p: { ...z, result: c.total, due: c.due, at: today() }, p_date: when || null }); toast.ok('حُفظت حسبة الزكاة'); onSaved(); onClose(); }
+    try { await rpc('pf_save_zakat', { p: { amount, due, at: today() }, p_date: when || null }); toast.ok('حُفظت حسبة الزكاة'); onSaved(); onClose(); }
     catch (e: any) { toast.err(e.message); }
   };
-  return <Modal open={open} onClose={onClose} wide title="حاسبة الزكاة" footer={<Button onClick={save}>حفظ</Button>}>
-    <div className="grid gap-5 md:grid-cols-[1.3fr_1fr]">
-      <div className="space-y-4">
-        <div className="grid grid-cols-2 gap-3">
-          {F('cash', 'النقد والأرصدة البنكية')}
-          <div>{F('fund', 'رصيدك في الصندوق', 'اشتراكات + ودائع')}
-            <label className="mt-1.5 flex items-center gap-2 text-xs text-muted"><input type="checkbox" className="size-3.5 accent-brand-600" checked={z.include_fund} onChange={e => setZ({ ...z, include_fund: e.target.checked })} />أدخله في الحساب</label></div>
-          {F('invest', 'أسهم وصناديق (للمتاجرة)', 'القيمة السوقية')}
-          {F('receivables', 'ديون لك مرجوّ سدادها')}
-          {F('debts', 'ديون عليك حالّة', 'تُخصم من الوعاء')}
-        </div>
-        <div className="rounded-xl border border-line p-3">
-          <div className="mb-2 text-sm font-medium">الذهب والفضة</div>
-          <div className="grid grid-cols-3 gap-3">{G('g24', 'ذهب عيار 24')}{G('g21', 'ذهب عيار 21')}{G('g18', 'ذهب عيار 18')}</div>
-          <div className="grid grid-cols-3 gap-3">
-            {F('gold_price', 'سعر جرام 24 اليوم', 'مطلوب للنصاب')}
-            {G('silver_g', 'فضة (جرام)')}
-            {F('silver_price', 'سعر جرام الفضة')}
-          </div>
-        </div>
-        <Field label="موعد الحول (تاريخ وجوب الزكاة)" hint={when ? `يوافق ${hijri(when)} — يذكّرك كل سنة هجرية إذا فعّلت تنبيهات ماليتي` : 'اختياري'}>
-          <Input type="date" value={when} onChange={e => setWhen(e.target.value)} /></Field>
-      </div>
-      <div className="space-y-3 rounded-2xl bg-brand-900 p-5 text-white">
-        <div className="text-xs text-brand-200">الوعاء الزكوي</div>
-        <div className="font-display text-2xl font-semibold num-cell">{sar(c.total)}</div>
-        <div className="space-y-1 text-xs text-brand-200">
-          {c.gold > 0 && <div className="flex justify-between"><span>قيمة الذهب</span><span className="num-cell">{sar(c.gold)}</span></div>}
-          {c.silver > 0 && <div className="flex justify-between"><span>قيمة الفضة</span><span className="num-cell">{sar(c.silver)}</span></div>}
-          <div className="flex justify-between"><span>النصاب (85 جرام ذهب)</span><span className="num-cell">{c.ready ? sar(c.nisab) : 'أدخل سعر الذهب'}</span></div>
-        </div>
-        <div className="border-t border-white/10 pt-3">
-          <div className="text-xs text-brand-200">الزكاة المستحقة (2.5%)</div>
-          <div className="font-display text-3xl font-semibold text-gold-300 num-cell">{sar(c.due)}</div>
-          <div className="mt-1 text-xs text-brand-200">{!c.ready ? 'أدخل سعر جرام الذهب لمعرفة النصاب.' : c.due ? 'مالك بلغ النصاب.' : 'مالك لم يبلغ النصاب — لا زكاة.'}</div>
-        </div>
-        <p className="text-[10.5px] leading-relaxed text-brand-300">حساب تقديري للحالات الشائعة. ما يُدخر في الصندوق قد يُزكّى من الصندوق نفسه — تأكد قبل إدخاله. وللمسائل الخاصة راجع أهل العلم.</p>
-      </div>
+  return <Modal open={open} onClose={onClose} title="حاسبة الزكاة" footer={<Button onClick={save}>حفظ</Button>}>
+    <Field label="المبلغ الذي تريد حساب زكاته" hint="مجموع ما حال عليه الحول من مالك"><MoneyInput value={amount} onChange={setAmount} autoFocus /></Field>
+    <div className="rounded-2xl bg-brand-900 p-5 text-center text-white">
+      <div className="text-xs text-brand-200">الزكاة (2.5%)</div>
+      <div className="mt-1 font-display text-4xl font-semibold text-gold-300 num-cell">{sar(due)}</div>
     </div>
+    <Field label="موعد الحول (اختياري)" hint={when ? `يوافق ${hijri(when)} — يذكّرك كل سنة هجرية إذا فعّلت تنبيهات ماليتي` : 'لتذكيرك بموعد زكاتك كل سنة'}>
+      <Input type="date" value={when} onChange={e => setWhen(e.target.value)} /></Field>
   </Modal>;
 }
 
