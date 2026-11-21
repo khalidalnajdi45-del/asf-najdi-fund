@@ -233,12 +233,12 @@ export function ShortcutModal({ open, o, onClose, onSaved }: { open: boolean; o:
   const E = ({ children }: { children: string }) => <bdi dir="ltr" className="rounded bg-canvas px-1 font-mono text-[12px]">{children}</bdi>;
   const steps = [
     <>افتح تطبيق «الاختصارات» <E>Shortcuts</E> ← تبويب «الأتمتة» <E>Automation</E> ← زر +.</>,
-    <>اختر «رسالة» <E>Message</E> ← «المرسل» <E>Sender</E> واختر اسم البنك كما يظهر في رسائلك (مثل <E>AlRajhiBank</E>)، أو اختر «الرسالة تحتوي على» واكتب: مبلغ</>,
+    <>اختر «رسالة» <E>Message</E>، واترك «المرسل» <E>Sender</E> فاضي (يعرض جهات الاتصال فقط، والبنوك ليست منها)، وفي «الرسالة تحتوي على» <E>Message Contains</E> اكتب: <b>مبلغ</b></>,
     <>اختر «تشغيل فوري» <E>Run Immediately</E> ثم «التالي» ← «أتمتة جديدة فارغة».</>,
     <>أضف إجراء «الحصول على محتويات عنوان URL» <E>Get Contents of URL</E> والصق الرابط أعلاه.</>,
     <>اضغط السهم بجانبه: الطريقة <E>POST</E>، وفي «الترويسات» <E>Headers</E> أضف المفتاح <E>x-capture-key</E> وقيمته مفتاحك.</>,
     <>في «نص الطلب» <E>Request Body</E> اختر <E>JSON</E> وأضف حقلاً اسمه <E>text</E>، وقيمته «مُدخل الاختصار» <E>Shortcut Input</E> ← «المحتوى» <E>Content</E>.</>,
-    <>احفظ، وكرر لكل بنك عندك. من الآن أي رسالة عملية تُسجل تلقائياً في ماليتي.</>,
+    <>احفظ. إذا بعض رسائل بنكك بالإنجليزي، كرر نفس الأتمتة بكلمة <E>SAR</E>. الرسائل غير المالية ورموز التحقق تُتجاهل تلقائياً، والمكررة لا تُسجل مرتين.</>,
   ];
   return <Modal open={open} onClose={onClose} wide title="تتبع رسائل البنك تلقائياً">
     <div className="space-y-4">

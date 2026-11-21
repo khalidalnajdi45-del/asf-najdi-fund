@@ -19,3 +19,10 @@ describe('bank SMS parser', () => {
     expect(parseMany('شراء\nمبلغ: 20 SAR\nلدى: ALDREES\n\nرمز التحقق 4455\n\nسداد فاتورة STC\nبمبلغ 230 ر.س')).toHaveLength(2);
   });
 });
+
+describe('bank SMS parser — OTP', () => {
+  it('ignores one-time codes that quote an amount', () => {
+    expect(parseSms('رمز التحقق 4321 لعملية شراء بمبلغ 45.50 SAR لدى STARBUCKS. لا تشارك الرمز')).toBeNull();
+    expect(parseSms('Your OTP for purchase of SAR 120.00 at NOON is 998877')).toBeNull();
+  });
+});

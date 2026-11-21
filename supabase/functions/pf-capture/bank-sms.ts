@@ -42,8 +42,11 @@ function iso(y: number, mo: number, d: number) {
   return `${y}-${String(mo).padStart(2, '0')}-${String(d).padStart(2, '0')}`;
 }
 
+const OTP = /(رمز التحقق|الرمز السري|رمز الدخول|كلمة المرور المؤقتة|كود|\bOTP\b|one[- ]?time|verification code|passcode|لا تشارك|do not share)/i;
+
 export function parseSms(raw: string): ParsedSms | null {
   const t = norm(raw);
+  if (OTP.test(t)) return null;   // one-time codes often quote the amount — the real transaction SMS follows
   // strip card / account numbers so they're never mistaken for the amount
   const clean = t.replace(/(?:بطاقة|البطاقة|card|حساب|الحساب|account|acc)\s*[:：]?\s*[*xX#\d\s-]{2,}/gi, ' ');
   let amount = 0;
