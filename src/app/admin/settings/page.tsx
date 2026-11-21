@@ -35,7 +35,8 @@ export default function SettingsPage() {
       notification_prefs: f.notification_prefs, profit_allocation_policy: f.profit_allocation_policy, demo_mode: f.demo_mode,
     };
     const inc = (f.income_categories ?? []).map(c => c.trim()).filter(Boolean);
-    const r = await a.run(() => rpc('update_fund_settings', { p: payload }).then(() => (inc.length ? rpc('set_income_categories', { p: inc }) : null)).then(() => true), 'تم حفظ الإعدادات وتسجيل التغيير في سجل التدقيق');
+    const r = await a.run(() => rpc('update_fund_settings', { p: payload }).then(() => (inc.length ? rpc('set_income_categories', { p: inc }) : null))
+      .then(() => rpc('set_loan_schedule_policy', { p_due_day: Number(f.loan_due_day ?? 28), p_min: String(f.loan_min_installment ?? '100'), p_cap: f.loan_member_monthly_cap ? String(f.loan_member_monthly_cap) : null })).then(() => true), 'تم حفظ الإعدادات وتسجيل التغيير في سجل التدقيق');
     if (r) { s.reload(); refresh(); }
   };
 
@@ -69,9 +70,13 @@ export default function SettingsPage() {
 
         <Card title="سياسة القروض">
           <div className="grid gap-3 sm:grid-cols-2">
-            <Field label="الحد الأعلى للقرض"><MoneyInput value={String(f.loan_max_amount)} onChange={v => set({ loan_max_amount: v })} /></Field>
+            <Field label="الحد الأعلى لطلب العضو" hint="لا يظهر للأعضاء — المبالغ الأكبر تسجلها أنت"><MoneyInput value={String(f.loan_max_amount)} onChange={v => set({ loan_max_amount: v })} /></Field>
             <Field label="أقصى مدة سداد (شهر)"><Input type="number" dir="ltr" value={f.loan_max_months} onChange={e => set({ loan_max_months: Number(e.target.value) })} /></Field>
             <Field label="رسوم إدارية افتراضية (%)" hint="0 = قرض حسن بدون رسوم"><Input dir="ltr" value={f.loan_default_fee_pct} onChange={e => set({ loan_default_fee_pct: e.target.value })} /></Field>
+            <Field label="يوم استحقاق الأقساط" hint="من 1 إلى 28"><Input type="number" min={1} max={28} dir="ltr" value={f.loan_due_day ?? 28} onChange={e => set({ loan_due_day: Number(e.target.value) })} /></Field>
+            <Field label="الحد الأدنى للقسط"><MoneyInput value={String(f.loan_min_installment ?? '100')} onChange={v => set({ loan_min_installment: v })} /></Field>
+            <Field label="أعلى مجموع أقساط شهرية للعضو" hint="على طلبات الأعضاء والجدولة الجماعية — تقدر تتجاوزه عند الجدولة من عندك. فاضي = بدون حد" className="sm:col-span-2">
+              <MoneyInput value={String(f.loan_member_monthly_cap ?? '')} onChange={v => set({ loan_member_monthly_cap: v || null })} /></Field>
             <Field label="مهلة قبل اعتبار القسط متأخراً (أيام)"><Input type="number" dir="ltr" value={f.loan_grace_days} onChange={e => set({ loan_grace_days: Number(e.target.value) })} /></Field>
             <label className="flex items-center gap-2 text-sm sm:col-span-2"><input type="checkbox" className="size-4 accent-brand-600" checked={f.loan_one_active_per_member} onChange={e => set({ loan_one_active_per_member: e.target.checked })} />قرض واحد قائم فقط لكل عضو</label>
             <label className="flex items-center gap-2 text-sm sm:col-span-2"><input type="checkbox" className="size-4 accent-brand-600" checked={f.loan_block_if_overdue} onChange={e => set({ loan_block_if_overdue: e.target.checked })} />منع طلب القرض عند وجود اشتراكات متأخرة</label>

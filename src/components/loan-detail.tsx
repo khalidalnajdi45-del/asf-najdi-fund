@@ -11,6 +11,8 @@ import { exportXlsx, n2, printPdf } from '@/lib/export';
 import { useSettings } from '@/lib/settings';
 import { Badge, Button, Card, DataTable, ErrorBox, Field, Input, KV, Loading, Modal, MoneyInput, Notice, PageHeader, Select, Stat, Tag, Textarea, isMoney } from './ui';
 import { ReasonModal, RepaymentModal, ReverseModal } from './ops';
+import { RescheduleModal, ReschedulePanel } from './loan-schedule';
+import { CalendarClock } from 'lucide-react';
 
 export function LoanDetail({ admin }: { admin: boolean }) {
   const id = useParam('id');
@@ -21,6 +23,8 @@ export function LoanDetail({ admin }: { admin: boolean }) {
   const [disburse, setDisburse] = useState(false);
   const [repay, setRepay] = useState<any>(null);
   const [rev, setRev] = useState<any>(null);
+  const [resched, setResched] = useState(false);
+  const [ver, setVer] = useState(0);
   const d = useData<any>(async () => {
     if (!id) return null;
     const [loan, inst, reps, auto] = await Promise.all([
@@ -63,6 +67,7 @@ export function LoanDetail({ admin }: { admin: boolean }) {
             <Button icon={<Banknote className="size-4" />} onClick={() => setDisburse(true)}>صرف القرض</Button>
             <Button variant="danger" onClick={() => setCancel(true)}>إلغاء</Button></>}
           {admin && live && <Button onClick={() => setRepay(l)}>تسجيل سداد</Button>}
+          {live && <Button variant="secondary" icon={<CalendarClock className="size-4" />} onClick={() => setResched(true)}>{admin ? 'إعادة جدولة' : 'طلب إعادة جدولة'}</Button>}
           {!admin && l.status === 'pending' && <Button variant="danger" onClick={async () => { await rpc('cancel_my_request', { p_kind: 'loan', p_id: l.id }); d.reload(); }}>إلغاء الطلب</Button>}
         </>} />
 
@@ -85,16 +90,18 @@ export function LoanDetail({ admin }: { admin: boolean }) {
         <ul className="list-inside list-disc space-y-0.5 text-ink-2">{d.data.auto.auto_check.reasons.map((r: string) => <li key={r}>{r}</li>)}</ul>
         {admin && <div className="mt-1 text-xs text-muted num-cell">صافي رصيد العضو قبل القرض {sar(d.data.auto.auto_check.net_before)} · بعده {sar(d.data.auto.auto_check.net_after)} · السيولة بعد الصرف {sar(d.data.auto.auto_check.liquid_after)} مقابل احتياطي {sar(d.data.auto.auto_check.reserve)}</div>}
       </div>}
+      {live && <ReschedulePanel key={ver} loan={l} admin={admin} onChange={d.reload} />}
       {Number(l.overdue_amount) > 0 && <div className="mt-3"><ErrorBox>يوجد {l.overdue_count} قسط متأخر بإجمالي {sar(l.overdue_amount)}</ErrorBox></div>}
 
       <div className="mt-4 grid gap-4 lg:grid-cols-3">
         <Card title="تفاصيل القرض" className="lg:col-span-2">
           <KV items={[
             ['المبلغ المطلوب', sar(l.requested_amount)], ['المبلغ المعتمد', l.approved_amount ? sar(l.approved_amount) : '—'],
-            ['الغرض', l.purpose], ['المدة المفضلة', `${l.preferred_months} شهر`],
+            ['الغرض', l.purpose], ['طريقة السداد', l.repayment_mode === 'lump' ? 'دفعة كاملة' : 'أقساط شهرية'],
+            [l.repayment_mode === 'lump' ? 'تاريخ الدفعة المطلوب' : 'المدة المفضلة', l.repayment_mode === 'lump' ? date(l.preferred_start) : `${l.preferred_months} شهر${l.preferred_start ? ` من ${date(l.preferred_start)}` : ''}`],
             ['عدد الأقساط', l.installments_count ?? '—'], ['دورية السداد', frequencyLabels[l.frequency] ?? '—'],
             ['تاريخ الطلب', date(l.request_date)], ['تاريخ الصرف', date(l.disbursed_on)],
-            ['أول قسط', date(l.first_due_date)], ['تاريخ الإغلاق', date(l.closed_on)],
+            [l.repayment_mode === 'lump' ? 'تاريخ السداد' : 'أول قسط', date(l.first_due_date)], ['تاريخ الإغلاق', date(l.closed_on)],
             ['ملاحظات العضو', l.notes], ['ملاحظة القرار', l.decision_note],
           ]} />
         </Card>
@@ -138,6 +145,7 @@ export function LoanDetail({ admin }: { admin: boolean }) {
         <RepaymentModal loan={repay} onClose={() => setRepay(null)} onDone={d.reload} />
         <ReverseModal tx={rev} onClose={() => setRev(null)} onDone={d.reload} />
       </>}
+      {live && <RescheduleModal open={resched} loan={l} admin={admin} onClose={() => setResched(false)} onDone={() => { d.reload(); setVer(v => v + 1); }} />}
     </>
   );
 }
@@ -145,7 +153,9 @@ export function LoanDetail({ admin }: { admin: boolean }) {
 function ApproveModal({ open, loan, onClose, onDone }: { open: boolean; loan: any; onClose: () => void; onDone: () => void }) {
   const a = useAction();
   const { data: s } = useSettings();
-  const [f, setF] = useState({ amount: String(loan.requested_amount), n: String(loan.preferred_months), freq: 'monthly', fee: '', first: '', note: '' });
+  const lump = loan.repayment_mode === 'lump';
+  const [f, setF] = useState({ amount: String(loan.requested_amount), n: lump ? '1' : String(loan.preferred_months), freq: 'monthly', fee: '',
+    first: loan.preferred_start && loan.preferred_start > today() ? loan.preferred_start : '', note: '' });
   useEffect(() => {
     if (s && open) setF(x => ({ ...x, fee: x.fee || (Math.round(Number(loan.requested_amount) * Number(s.loan_default_fee_pct)) / 100).toFixed(2) }));
   }, [s, open]); // eslint-disable-line
@@ -163,11 +173,12 @@ function ApproveModal({ open, loan, onClose, onDone }: { open: boolean; loan: an
       <div className="grid grid-cols-2 gap-3">
         <Field label="المبلغ المعتمد"><MoneyInput value={f.amount} onChange={v => setF({ ...f, amount: v })} /></Field>
         <Field label="رسوم إدارية" hint={s ? `حسب السياسة: ${s.loan_default_fee_pct}٪` : undefined}><MoneyInput value={f.fee} onChange={v => setF({ ...f, fee: v })} /></Field>
-        <Field label="عدد الأقساط"><Input type="number" min={1} max={120} dir="ltr" value={f.n} onChange={e => setF({ ...f, n: e.target.value })} /></Field>
-        <Field label="دورية السداد"><Select value={f.freq} onChange={e => setF({ ...f, freq: e.target.value })} options={[{ value: 'monthly', label: 'شهري' }, { value: 'quarterly', label: 'ربع سنوي' }]} /></Field>
-        <Field label="تاريخ أول قسط (اختياري)" hint="افتراضياً: بعد فترة واحدة من الصرف" className="col-span-2"><Input type="date" min={today()} value={f.first} onChange={e => setF({ ...f, first: e.target.value })} /></Field>
+        {lump ? <div className="col-span-2 rounded-xl bg-gold-100/60 px-3 py-2 text-sm text-gold-700">العضو طلب السداد <b>دفعة كاملة</b> بتاريخ <span className="num">{date(loan.preferred_start)}</span></div> : <>
+        <Field label="عدد الأقساط" hint={s?.loan_min_installment ? `القسط لا يقل عن ${sar(s.loan_min_installment)}` : undefined}><Input type="number" min={1} max={120} dir="ltr" value={f.n} onChange={e => setF({ ...f, n: e.target.value })} /></Field>
+        <Field label="دورية السداد"><Select value={f.freq} onChange={e => setF({ ...f, freq: e.target.value })} options={[{ value: 'monthly', label: 'شهري' }, { value: 'quarterly', label: 'ربع سنوي' }]} /></Field></>}
+        <Field label={lump ? 'تاريخ الدفعة' : 'تاريخ أول قسط'} hint={loan.preferred_start ? 'حسب اختيار العضو — تقدر تغيّره' : `افتراضياً: يوم ${s?.loan_due_day ?? 28} من الشهر التالي للصرف`} className="col-span-2"><Input type="date" min={today()} value={f.first} onChange={e => setF({ ...f, first: e.target.value })} /></Field>
       </div>
-      <Notice>إجمالي المستحق <span className="num font-semibold">{sar(total)}</span> — القسط التقريبي <span className="num font-semibold">{sar(per)}</span></Notice>
+      <Notice>إجمالي المستحق <span className="num font-semibold">{sar(total)}</span>{!lump && <> — القسط التقريبي <span className="num font-semibold">{sar(per)}</span></>}</Notice>
       <Field label="ملاحظة"><Textarea value={f.note} onChange={e => setF({ ...f, note: e.target.value })} /></Field>
       <ErrorBox>{a.error}</ErrorBox>
     </Modal>
@@ -185,7 +196,7 @@ function DisburseModal({ open, loan, onClose, onDone }: { open: boolean; loan: a
   return (
     <Modal open={open} onClose={onClose} title="صرف القرض"
       footer={<><Button onClick={submit} loading={a.busy}>تأكيد الصرف</Button><Button variant="secondary" onClick={onClose}>إلغاء</Button></>}>
-      <Notice>سيتم صرف <span className="num font-semibold">{sar(loan.approved_amount)}</span> لـ{loan.member_name}، وإنشاء جدول {loan.installments_count} قسط، وقيد: مدين قروض الأعضاء / دائن النقد — في عملية واحدة.</Notice>
+      <Notice>سيتم صرف <span className="num font-semibold">{sar(loan.approved_amount)}</span> لـ{loan.member_name}، وإنشاء {loan.repayment_mode === 'lump' ? 'دفعة سداد واحدة' : `جدول ${loan.installments_count} قسط`}، وقيد: مدين قروض الأعضاء / دائن النقد — في عملية واحدة.</Notice>
       <div className="grid grid-cols-2 gap-3">
         <Field label="تاريخ الصرف"><Input type="date" max={today()} value={f.date} onChange={e => setF({ ...f, date: e.target.value })} /></Field>
         <Field label="مرجع التحويل"><Input value={f.ref} onChange={e => setF({ ...f, ref: e.target.value })} /></Field>

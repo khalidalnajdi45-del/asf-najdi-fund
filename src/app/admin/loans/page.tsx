@@ -3,6 +3,7 @@ import { go } from '@/lib/nav';
 import { useState } from 'react';
 import { Download, Plus } from 'lucide-react';
 import { NewLoanModal } from '@/components/new-loan';
+import { BulkRescheduleModal } from '@/components/loan-schedule';
 import { supabase } from '@/lib/supabase';
 import { q, useData } from '@/lib/hooks';
 import { date, sar } from '@/lib/format';
@@ -19,6 +20,7 @@ export default function LoansManagement() {
   const [tab, setTab] = useState('active');
   const [repay, setRepay] = useState<any>(null);
   const [add, setAdd] = useState(false);
+  const [bulk, setBulk] = useState(false);
   const d = useData<any[]>(() => q(supabase().from('v_loan_summary').select('*').in('status', ['disbursed', 'active', 'overdue', 'fully_repaid']).order('disbursed_on', { ascending: false })));
   const t0 = today(), m0 = t0.slice(0, 8) + '01', m1 = new Date(Date.UTC(+t0.slice(0, 4), +t0.slice(5, 7), 0)).toISOString().slice(0, 10);
   const inst = useData<any[]>(async () => {
@@ -54,7 +56,9 @@ export default function LoansManagement() {
       <PageHeader title="إدارة القروض" subtitle="القروض المصروفة وجداول السداد"
         actions={<>
           <Button icon={<Plus className="size-4" />} onClick={() => setAdd(true)}>قرض جديد</Button>
+          <Button variant="secondary" icon={<CalendarClock className="size-4" />} onClick={() => setBulk(true)}>جدولة جماعية</Button>
           <Button variant="secondary" icon={<Download className="size-4" />} onClick={exportList}>Excel</Button></>} />
+      <BulkRescheduleModal open={bulk} onClose={() => setBulk(false)} onDone={d.reload} />
       <NewLoanModal open={add} onClose={() => setAdd(false)} onDone={id => go(`/admin/loans/view/?id=${id}`)} />
       <Band>
         <div className="grid gap-6 lg:grid-cols-[auto_1fr_1fr] lg:items-center">

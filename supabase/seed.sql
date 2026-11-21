@@ -128,6 +128,11 @@ begin
   for r in select * from public.loan_installments where loan_id = v_loan and due_date <= v_today - 45 order by seq loop
     perform public.record_loan_repayment(v_loan, r.amount_due, r.due_date + 2, 'SADAD-L503-' || r.seq);
   end loop;
+  -- the member asks to stretch the remaining balance (waits for the manager)
+  perform set_config('request.jwt.claim.sub', v_u[9]::text, true);
+  perform public.request_loan_reschedule(v_loan, 'installments', (date_trunc('month', public.fund_today()) + interval '2 months')::date, 12,
+                                         'تأخرت بسبب ظرف طارئ — أطلب تمديد المدة');
+  perform set_config('request.jwt.claim.sub', v_mgr::text, true);
 
   -- early repayment
   perform set_config('request.jwt.claim.sub', v_u[1]::text, true);

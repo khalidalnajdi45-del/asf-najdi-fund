@@ -8,6 +8,7 @@ import { q, useData } from '@/lib/hooks';
 import { date, num, sar } from '@/lib/format';
 import { Badge, Card, DataTable, PageHeader, Tabs, Tag } from '@/components/ui';
 import { Avatar, Band, BandStat, Ring } from '@/components/admin-viz';
+import { RescheduleRequests } from '@/components/loan-schedule';
 
 type Check = { auto: boolean; net_before: string; net_after: string; blocked?: boolean; liquid_after?: string; reserve?: string; reasons: string[] };
 
@@ -36,7 +37,8 @@ function RequestCard({ r }: { r: any }) {
       </div>
       <div className="flex w-full items-end justify-between gap-2">
         <div><div className="font-display text-2xl font-semibold text-brand-700 num-cell">{sar(r.requested_amount)}</div>
-          <div className="text-xs text-muted"><span className="num">{r.preferred_months}</span> شهر · قسط تقريبي <span className="num-cell">{sar(monthly)}</span></div></div>
+          <div className="text-xs text-muted">{r.repayment_mode === 'lump' ? <>دفعة كاملة بتاريخ <span className="num">{date(r.preferred_start)}</span></>
+            : <><span className="num">{r.preferred_months}</span> شهر · قسط تقريبي <span className="num-cell">{sar(monthly)}</span>{r.preferred_start && <> · من {date(r.preferred_start)}</>}</>}</div></div>
       </div>
       {r.purpose && <p className="w-full truncate rounded-lg bg-canvas px-3 py-2 text-xs text-ink-2">«{r.purpose}»</p>}
       <div className="w-full rounded-xl border border-dashed border-line p-3 text-xs">
@@ -94,6 +96,7 @@ export default function LoanApplications() {
         { key: 'closed', label: 'مرفوضة / ملغاة', count: closed.length }, { key: 'all', label: 'السجل الكامل' },
       ]} />
 
+      {tab === 'board' && <RescheduleRequests />}
       {tab === 'board' ? (
         <div className="grid gap-5 xl:grid-cols-[1.6fr_1fr]">
           <section>
